@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"> <!-- must use doctype or IE has problems http://hsivonen.iki.fi/doctype/ -->
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+textarea{
+width: 100%;
+}
+</style>
+</HEAD>
+<BODY>
+<script>
+  /*    
+  @licstart  The following is the entire license notice for the 
+  JavaScript code in this page.
+  
+  Copyright 2015  Ryan Beasley and Joanna Lahey
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  
+  @licend  The above is the entire license notice
+  for the JavaScript code in this page.
+  */
+</script>
+<SCRIPT type="text/javascript">
+if (typeof parent.templateMad === "undefined") {
+  document.write("<p style='background-color:yellow;'>Error! Unable to load template...make sure you loaded resume-randomizer-framemaster.html, not resume-randomizer-text.html</p>")
+}
+</SCRIPT>
+
+<p><input type="button" value="Clear template" onClick="parent.clearTemplateAndReloadAll()">
+<input type="button" value="Load this template" onClick="parent.loadTemplate()">
+
+<SCRIPT type="text/javascript">
+
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+    document.write('</p><p><input type="file" id="files" name="files[]" /><br>');
+    var fileLoading = true;
+    function handleFileSelect(evt) {
+	var files = evt.target.files; // FileList object
+	// files is a FileList of File objects.
+	var output = [];
+	for (var i = 0, f; f = files[i]; i++) {
+            var ext = f.name.substring(f.name.lastIndexOf('.') + 1).toLowerCase();
+            if(ext != 'rtf') {
+		alert('Only files with the extension .rtf can be loaded.');
+		continue;
+	    }
+	    var reader = new FileReader();
+	    reader.onload = (function(theFile) {
+		return function(e) {
+		    document.getElementById("templateText").value = e.target.result;
+		    parent.loadTemplate();
+		};
+	    })(f);
+	    reader.readAsText(f);
+	}
+    }
+}
+
+//This doesn't quite work because you can't save as, and it gets a crazy name.
+//document.write('<a download="MyFile.txt" ' +
+//	       'href="data:application/x-download;charset=utf-8,' + encodeURIComponent(parent.templateMad) + '" ' +
+//	       'draggable="true" ' +
+//	       'class="dragout" ' +
+//	       '>Download ready</a> ');
+
+</SCRIPT>
+
+<input type="button" value="Select all" onClick="parent.selectAll()">
+</p>
+
+<SCRIPT type="text/javascript">
+if (fileLoading) {
+    document.getElementById('files').addEventListener('change', handleFileSelect, false);
+}
+
+document.write('<TEXTAREA id="templateText" rows="40" wrap="off"  onkeydown="return parent.insertTab(event,this);">');
+var templateCopy = parent.templateMad;
+for (var countTemplate = 0; countTemplate < templateCopy.length; countTemplate ++) document.write(templateCopy[countTemplate]+'\n');
+document.write('</TEXTAREA>');
+
+</SCRIPT>
+</BODY>
+</HTML>

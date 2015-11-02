@@ -1,0 +1,518 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"> <!-- must use doctype or IE has problems http://hsivonen.iki.fi/doctype/ -->
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+randomStart {display: table;
+	     margin: 1pt;
+	     border-style: solid;
+	     border-width: 3pt;
+	     border-color: #333;
+	     padding: 1px;}
+randomSub {display: table;
+	   margin: 1pt;
+	   border-style: solid;
+	   border-width: 2pt;
+	   border-color: #888;
+	   padding: 1px;}
+dependentStart {display: table;
+		margin: 1pt;
+		border-style: dashed;
+		border-radius: 1em/5em;
+		border-width: 3pt;
+		border-color: #333;
+		padding: 1px;}
+dependentSub {display: table;
+	      margin: 1pt;
+	      border-style: solid;
+	      border-radius: 1em/5em;
+	      border-width: 2pt;
+	      border-color: #888;
+	      padding: 1px;}
+emptySub {background-color: #888;}
+hidden {display: none;}
+textarea {width: 100%;}
+</style>
+
+</style>
+<script>
+  /*    
+  @licstart  The following is the entire license notice for the 
+  JavaScript code in this page.
+  
+  Copyright 2015  Ryan Beasley and Joanna Lahey
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  
+  @licend  The above is the entire license notice
+  for the JavaScript code in this page.
+  */
+</script>
+   
+<SCRIPT type="text/javascript">
+
+lineNumber = 0;
+
+function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
+    var tempSplit = new Array();
+    tempSplit = templateCopy[lineNumber].split(" ");
+    var myText = tempSplit[0];
+    if ((myText != "*leaf*") && (myText != "*random*") && (myText != "*constant*") && (myText != "*dependent*")) {
+	if (templateCopy[lineNumber] == "") templateCopy[lineNumber] = "a blank line";
+
+	document.write("</hidden><p style='background-color:yellow;'>Error! The template text (in the right frame) is malformed.<br>Could not find a start tag (e.g., *random*).  Instead, got: "+templateCopy[lineNumber]+"</p><p style='background-color:yellow;'>Review the template text in the right-hand frame and make sure that the lines that start with *constant*, *random*, and *dependent* all correctly identify the number of their subsections.  For example, a line that says '*constant* 2-4-1 5' must have 5 subsections.</p>");
+	return -1;
+    }
+    var myLabel = tempSplit[1];
+    var hidden = false;
+    if ((tempSplit.length > 3) && (tempSplit[3] == "*hide*")) hidden = true;
+    var hideMe = hidden || parentHidden;
+    if (hidden && !parentHidden) document.write('<p><li><a name="' + myLabel + '" id="' + myLabel + '">'+myLabel+'</a>');
+    if (parentHidden) document.write('<a name="' + myLabel + '" id="' + myLabel + '"></a>');
+    if (hideMe) document.write('<hidden>');
+    else {
+	document.write('<p><li>');
+	if (myLabel != "1") document.write('<input type="button" value="Add section here" onClick="parent.addSectionAbove(\'' +myLabel+ '\');"><br>');
+	document.write('<a name="' + myLabel + '" id="' + myLabel + '">'+myLabel+'</a>');
+    }
+    document.write(' <select id="type' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');">');
+    if (myText == "*leaf*") {
+	var copyOfText = "";
+	document.write('<option SELECTED value="*leaf*">Leaf</option>');
+	document.write('<option value="*constant*">Constant</option>');
+	document.write('<option value="*random*">Random</option>');
+	document.write('<option value="*dependent*">Dependent</option>');
+	document.write('</select>');
+	lineNumber++;
+	if (canDeleteMe) document.write(' <input type="button" value="Delete this section" onClick="parent.deleteSection(\'' +myLabel+ '\');">');
+	var tempLineNumber = lineNumber;
+	while ((tempLineNumber < templateCopy.length) && (templateCopy[tempLineNumber].indexOf("*end_leaf*")<0) && (templateCopy[tempLineNumber].indexOf(myLabel)<0)) {
+	    tempLineNumber++;
+	}
+	textarea_height = tempLineNumber - lineNumber;
+	document.write('<br><TEXTAREA id="leaf' + myLabel + '" onchange="parent.updateTemplate();" cols="100" rows="' + textarea_height + '" wrap="off" onkeydown="return parent.insertTab(event,this);">');
+	var doOnce = 0;
+	while ((templateCopy[lineNumber].indexOf("*end_leaf*")<0) && (templateCopy[lineNumber].indexOf(myLabel)<0)) {
+	    if (doOnce == 0) {
+		doOnce = 1;
+		if (templateCopy[lineNumber] == '') {
+		    document.write("\n");
+		    if (hideMe) copyOfText += "<br>";
+		}
+	    } else {
+		document.write("\n");
+		if (hideMe) copyOfText += "<br>";
+	    }
+	    document.write(templateCopy[lineNumber]);
+	    if (hideMe) copyOfText += templateCopy[lineNumber];
+	    lineNumber++;
+	    //alert(lineNumber);
+	    if (lineNumber >= templateCopy.length) {
+		document.write("</TEXTAREA></hidden><p style='background-color:yellow;'>Error! The template text (in the right frame) is malformed.<br>Could not find *end_leaf* " + myLabel + "<br>Review the template text in the right-hand frame and make sure that the lines that start with *constant*, *random*, and *dependent* all have the correct number (following the section label) for the number of their subsections.  For example, a line that says '*constant* 2-4-1 5' must have 5 subsections.</p>");
+		return -3;
+	    }
+	}
+	document.write('</TEXTAREA>');
+	if (hideMe) {
+	    copyOfText = copyOfText.replace(/ /g,'&nbsp;');
+	    if (copyOfText == "") copyOfText = "<emptySub>&nbsp;</emptySub>";
+	    document.write('</hidden>' + copyOfText);  //I would use <pre> here, but that breaks randomStart and randomSub
+	}
+	lineNumber++;
+	return 1;
+    }
+
+    if ((myText == "*random*") || (myText == "*dependent*") || (myText == "*constant*")) {
+	var myNumChoices = tempSplit[2];
+	document.write('<option value="*leaf*">Leaf</option>');
+	document.write('<option');
+	if (myText=="*constant*") {
+	    document.write(' SELECTED');
+	}
+	document.write(' value="*constant*">Constant</option>');
+	document.write('<option');
+	if (myText=="*random*") {
+	    document.write(' SELECTED');
+	}
+	document.write(' value="*random*">Random</option>');
+	document.write('<option');
+	if (myText=="*dependent*") {
+	    document.write(' SELECTED');
+	}
+	document.write(' value="*dependent*">Dependent</option>');
+	document.write('</select>');
+
+	if (myText == "*random*") {
+	    var repeat = false;
+	    var repeatSame = false;
+	    var repeatNever = false;
+	    var repeatNoDoubles = false;
+	    var repeatDifferentDouble = false;
+	    var matchSame = false;
+	    var matchDifferent = false;
+	    var matchOnlyOneEver = false;
+	    var minimumNumberOfEntries = 0;
+	    var maximumNumberOfEntries = 0;
+	    var nonUniformFirstSubPoint = false;
+	    for (countSplit = 3; countSplit < tempSplit.length; countSplit++) {
+		if ((tempSplit[countSplit] == "*repeat*") && (tempSplit.length > countSplit+3)) {
+		    repeat = true
+		    var repeatStart = tempSplit[countSplit+1]
+		    var repeatEnd = tempSplit[countSplit+2]
+		    var repeatInterval = tempSplit[countSplit+3]
+		}
+		else if (tempSplit[countSplit] == "*repeatSame*") repeatSame = true
+		else if (tempSplit[countSplit] == "*repeatNever*") repeatNever = true
+		else if (tempSplit[countSplit] == "*repeatNoDoubles*") repeatNoDoubles = true
+		else if ((tempSplit[countSplit] == "*repeatDifferentDouble*") && (tempSplit.length > countSplit +1)) {
+		    repeatDifferentDouble = true
+		    var repeatDifferentDoublePercentage = tempSplit[countSplit+1]
+		}
+		else if ((tempSplit[countSplit] == "*minimumNumberOfEntries*") && (tempSplit.length > countSplit +1)) {
+		    minimumNumberOfEntries = tempSplit[countSplit+1]
+		}
+		else if ((tempSplit[countSplit] == "*maximumNumberOfEntries*") && (tempSplit.length > countSplit +1)) {
+		    maximumNumberOfEntries = tempSplit[countSplit+1]
+		}
+		else if (tempSplit[countSplit] == "*matchSame*") matchSame = true;
+		else if (tempSplit[countSplit] == "*matchDifferent*") matchDifferent = true;
+		else if (tempSplit[countSplit] == "*matchOnlyOneEver*") matchOnlyOneEver = true;
+		else if ((tempSplit[countSplit] == "*nonUniformFirstSubPoint*") && (tempSplit.length > countSplit +1)) {
+		    nonUniformFirstSubPoint = true;
+		    var nonUniformFirstSubPointPercentage = tempSplit[countSplit+1]
+		}
+	    }
+	}
+
+	if ((myText == "*random*") || (myText == "*constant*")) {
+	    document.write('<select id="num' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');"');
+	    //    if ((myText == "*random*") && (matchDifferent)) document.write(' disabled');
+	    document.write('>');
+	    for (var countNums = 1; countNums < 200; countNums++) {
+		document.write('<option');
+		if (myNumChoices == countNums) {
+		    document.write(' SELECTED');
+		}
+		document.write(' value="' + countNums + '">' + countNums + '</option>');
+	    }
+	    document.write('</select>');
+	}
+	if (myText == "*dependent*") {
+	    //are there any random sections?
+	    var foundAtLeastOneRandom = false;
+	    for (var tempLineNumber = 0; tempLineNumber < templateCopy.length; tempLineNumber++) {
+		var tempSplitToFindRandoms = new Array();
+		tempSplitToFindRandoms = templateCopy[tempLineNumber].split(" ");
+		if (tempSplitToFindRandoms[1] == myLabel) break;
+		if (tempSplitToFindRandoms[0] == "*random*") {
+		    foundAtLeastOneRandom = true;
+		    break;
+		}
+	    }
+	    if (foundAtLeastOneRandom) {
+		var myMasterId = "";
+		for (countSplit = 3; countSplit < tempSplit.length-1; countSplit++) {
+		    if (tempSplit[countSplit] == "*master*") {
+			myMasterId = tempSplit[countSplit + 1];
+			break;
+		    }
+		}
+		document.write(' on section labeled <select id="master' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');">');
+		for (var tempLineNumber = 0; tempLineNumber < templateCopy.length; tempLineNumber++) {
+		    var tempSplitToFindRandoms = new Array();
+		    tempSplitToFindRandoms = templateCopy[tempLineNumber].split(" ");
+		    if (tempSplitToFindRandoms[1] == myLabel) break;
+		    if (tempSplitToFindRandoms[0] == "*random*") {
+			foundAtLeastOneRandom = true;
+			thisRandomId = tempSplitToFindRandoms[1];
+			document.write('<option');
+			if (myMasterId == thisRandomId) document.write(' SELECTED');
+			document.write(' value="' + thisRandomId + '">' + thisRandomId + '</option>');
+		    }
+		}
+		document.write('</select>');
+	    } else document.write(' but there are no random sections upon which it can depend.');
+	}
+	if (hidden && !parentHidden) document.write('</hidden>');
+	document.write(' <input id="hidden' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+	if (hidden) document.write(' checked');
+	document.write('>Hide</input> ')
+	if (hidden && !parentHidden) document.write('<br><hidden>');
+	if (myText == "*random*") {
+	    document.write(' <input id="nonUniformFirstSubPoint' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+	    if (nonUniformFirstSubPoint) document.write(' checked')
+	    document.write('>First sub-point percentage')
+	    if (nonUniformFirstSubPoint) document.write(':')
+	    document.write('</input>')
+	    if (nonUniformFirstSubPoint) document.write('...Percent (0 to 100):<input id="nonUniformFirstSubPointPercentage' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');" size="2" value="'+nonUniformFirstSubPointPercentage+'"></input>%');
+
+	    if (matchSame || matchDifferent || matchOnlyOneEver) {
+		document.write(' <input id="matched' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');" checked>Matched:</input>')
+		document.write('<input id="matchDifferent' + myLabel + '" name="match' + myLabel + '" type="radio" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (matchDifferent) document.write(' checked')
+		document.write('>MatchDifferent</input>, <input id="matchSame' + myLabel + '" name="match' + myLabel + '" type="radio" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (matchSame) document.write(' checked')
+		document.write('>MatchSame</input>, <input id="matchOnlyOneEver' + myLabel + '" name="match' + myLabel + '" type="radio" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (matchOnlyOneEver) document.write(' checked')
+		document.write('>MatchOnlyOneEver</input>')
+	    }
+	    else document.write(' <input id="matched' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');">Matched</input>')
+	    document.write('<br><input id="repeat' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+	    if (repeat) document.write(' checked')
+	    document.write('>Repeat</input>')
+	    if (repeat) {
+		document.write('...Start:<input id="repeatStart' + myLabel + '" onchange="parent.updateTemplate();" size="5" value="'+repeatStart+'"></input>');
+		document.write(' End:<input id="repeatEnd' + myLabel + '" onchange="parent.updateTemplate();" size="5" value="'+repeatEnd+'"></input>');
+		document.write(' Interval:<input id="repeatInterval' + myLabel + '" onchange="parent.updateTemplate();" size="5" value="'+repeatInterval+'"></input>');
+		document.write(' <input id="repeatNoDoubles' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"');
+		if (repeatNoDoubles) document.write(' checked');
+		document.write('>Do not print doubles</input>');
+		if ((repeatNoDoubles) && (!repeatNever) && (!repeatSame)) {
+		    document.write(', Minimum # of entries:<input id="minimumNumberOfEntries' + myLabel + '" onchange="parent.updateTemplate();" size="2" value="'+minimumNumberOfEntries+'"></input>');
+		    document.write(', Maximum # of entries:<input id="maximumNumberOfEntries' + myLabel + '" onchange="parent.updateTemplate();" size="2" value="'+maximumNumberOfEntries+'"></input>');
+		}
+	    }
+	    if (repeat || repeatParent) {
+		document.write(' <input id="repeatSame' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (repeatSame) document.write(' checked')
+		document.write('>Same when repeat</input>')
+		document.write(' <input id="repeatNever' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (repeatNever) document.write(' checked')
+		document.write('>Always different when repeat</input>')
+		document.write(' <input id="repeatDifferentDouble' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (repeatDifferentDouble) document.write(' checked')
+		document.write('>Non-uniform chance for immediate repeat</input>')
+		if (repeatDifferentDouble) document.write('...Percent (0 to 100):<input id="repeatDifferentDoublePercentage' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');" size="2" value="'+repeatDifferentDoublePercentage+'"></input>%');
+	    }
+	}
+	if (canDeleteMe) document.write(' <input type="button" value="Delete this section" onClick="parent.deleteSection(\'' +myLabel+ '\');">');
+	if (hideMe) {
+	    document.write('</hidden>');
+	    if (myText == "*random*") document.write('<randomStart>');
+	    if (myText == "*dependent*") document.write('<dependentStart>');
+	} else document.write('<ul>');
+	lineNumber++;
+
+	for (var countNums = 0; countNums < myNumChoices; countNums++) {
+	    if ((myText == "*random*") && (hideMe)) document.write('<randomSub>');
+	    if ((myText == "*dependent*") && (hideMe)) document.write('<dependentSub>');
+	    returnVal = parseTemplateCopy(repeat || repeatParent, hideMe, myNumChoices>1);
+	    if ((myText == "*random*") && (hideMe)) document.write('</randomSub>');
+	    if ((myText == "*dependent*") && (hideMe)) document.write('</dependentSub>');
+	    if (returnVal < 0) return returnVal;
+	}
+	if (hideMe) {
+	    if (myText == "*random*") document.write('</randomStart>');
+	    if (myText == "*dependent*") document.write('</dependentStart>');
+	} else document.write('<br><input type="button" value="Add section here" onClick="parent.addSectionBelow(\'' +myLabel+ '\');"></ul>');
+
+	if (templateCopy[lineNumber].indexOf("*end_" + myText.substring(1,myText.length) + " " + myLabel) < 0) {
+	    document.write("</hidden><p style='background-color:yellow;'>Error! Template text (in right frame) is malformed.<br>Could not find <br>*end_" + myText.substring(1,myText.length) + " " + myLabel + "<br>Review the template text in the frame to the right and make sure that each *leaf*, *constast*, *random*, and *dependent* section has a corresponding *end_leaf*, *end_constant*, etc., line, and that the section labels match.  So if there is a line '*leaf* 1-1', then further down in the template text there must be the line '*end_leaf* 1-1'.</p>");
+	    return -2;
+	}
+	lineNumber++;
+	return 1;
+    }
+    // I was expecting to find a start tag (*leaf*, *random*, etc)...but I didn't.  So there's a problem.
+    return -1;
+}
+
+function scrollToElement() {
+    var elem = parent.guiHash;
+    if (typeof elem == 'string') elem = document.getElementById(elem);
+    var top = 0;
+    if (elem) {
+        if(elem.offsetParent) {
+            top = elem.offsetTop;
+            while(elem = elem.offsetParent) {
+                top += elem.offsetTop;
+            }
+        }
+        window.scrollTo(0, top);
+    }
+}
+
+</SCRIPT>
+</HEAD>
+<BODY onload="scrollToElement()";>
+<SCRIPT type="text/javascript">
+if (typeof parent.templateMad === "undefined") {
+  document.write("<p style='background-color:yellow;'>Error! Unable to load template...make sure you loaded resume-randomizer-framemaster.html, not resume-randomizer-code.html</p>")
+}
+</SCRIPT>
+
+<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 23</span></h1>
+<p>This webpage generates templates for the Resume Randomizer program.
+<br>Firefox (version 23.0.1) is the recommended browser.  Internet Explorer (version 10.0) also works except for the "hide" checkboxes.  Chrome (version 29.0) is known not to work (due to the way Chrome handles inter-frame communication when in local mode).  You may be required to enable "active content" or "allow blocked content".
+<p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>.
+<hr>
+<h2><a name="basic">Basic Use</a></h2>
+<ul>
+<li>To generate a template, use the drop down boxes in the middle of this page ("create templates here") to select a type (one of 'Constant', 'Random', 'Dependent', or 'Leaf') for each point in the outline, entering text for each 'Leaf' point.  See the examples below for illustrations of the use of the program.
+<li>To <b>save</b> a template, copy the text in the frame to the right and paste into a file on your computer.  That file must be in the same folder as the Resume Randomizer program and its name must end with ".rtf" (no quotes), which stands for resume template file.  Use Notepad, Emacs, Vi, or some other editor that does not store extra information in the file.  Do not use Microsoft Word or Wordpad, because the resume-randomizer.exe program cannot handle extra information (e.g., formatting, or version info for the editor) added to the resume template file.
+<li>To <b>create</b> resumes from a template, run (double-click) the Resume Randomizer program, "resume-randomizer.exe", which will ask which template file it should use to create resumes.
+<li>To <b>load</b> a template into this webpage for changes at a later date: if supported by your webbrowser, there is a "Browse" button in the frame to the right, click that button and select the file containing the template you want to load.  If there is no "Browse" button, 1) delete the text in the frame to the right, 2) copy the text from a previously created template file, 3) paste that text into the right-hand frame's text box, 4) then press the button "Load this template".
+<li>Pressing the "Clear template" button in the right-hand frame will reset the template so that there is only one point, a 'Leaf'.
+<li>Pressing the "Select all" button in the right-hand frame will select the text, making it easier to copy or delete.
+</ul>
+<p>Advanced usage is explained below.
+<hr>
+<h2><a name="explanation">Explanation</a></h2>
+<p>This webpage generates templates which are used by the Resume Randomizer program, "resume-randomizer.exe", to create resumes with randomized characteristics.  It is possible to create templates without using this webpage, but this webpage makes the process easier by reducing potential for errors and providing a graphical user interface.  See the included "README.txt" file for an overview, as well as: Lahey, Joanna and Beasley, Ryan A., Computerizing Audit Studies (July 1, 2007). Available at SSRN: <a style="white-space:nowrap;" href="http://ssrn.com/abstract=1001038">http://ssrn.com/abstract=1001038</a> or <a style="white-space:nowrap;" href="http://dx.doi.org/10.2139/ssrn.1001038">http://dx.doi.org/10.2139/ssrn.1001038</a>.
+<p>When creating resumes, the program starts at the top point in the template's outline (which has the label '1').  When it encounters an outline point with the 'Constant' type, it moves to each of the sub-points in the order listed.  When the program encounters an outline point with the 'Random' type, it moves to only one of the sub-points (chosen randomly with equal likelihood by default).  When it encounters an outline point with the 'Dependent' type, it must depend on a specific 'Random' section; the 'Dependent' section always chooses the same sub-point as the 'Random' section on which it depends.  When the program encounters an outline point with the 'Leaf' type, it writes any text in that 'Leaf' to the resume file.  Note that outline points labeled 'Constant' and 'Random' have drop-down boxes to select the number of sub-points. See the "Examples" section for demonstrations of randomized characteristics in resumes.
+<p>The program produces four files for each resume, plus a single codebook file.  All the created files are plain-text.  The resume itself ends in ".doc".  The other three files created for each resume (ending in ".sav", ".txt", and ".csv") are data files that contain the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  Each of these three files contains sufficient information to reconstruct the resume from the template.  The single codebook file (ends in ".xls") matches the numbers in those data files with the actual text that would be placed in the resumes.  These files are discussed in more detail in the section "Output of resume-randomizer.exe".
+<SCRIPT type="text/javascript">
+var templateCopy = parent.templateMad;
+document.write("<p><hr><h2>Create templates here:</h2>");
+if (typeof parent.templateMad === "undefined") {
+  document.write("<p style='background-color:yellow;'>Error! Unable to load template...make sure you loaded resume-randomizer-framemaster.html, not resume-randomizer-code.html</p>")
+} else {
+  document.write("<p><ul>")
+  lineNumber++;
+  while (lineNumber < templateCopy.length) {
+    if (parseTemplateCopy(false, false, false) < 0) break;
+  }
+  document.write("</ul>");
+}
+</SCRIPT>
+<hr>
+<h2><a name="files">Files</a></h2>
+<p>Three example templates are included with the Resume Randomizer program.  The first is named "example_cover_letter_template.rtf" and generates cover letters for a matched pairs study, such that the two cover letters contain different but functionally equivalent text.  The second is named "example_resume_template.rtf" and generates resumes as if for a matched pair study on the effects of high school graduation date on the probability of interview callbacks.  Note that this latter template is the same as Example 10 (below).  The third is named "example_resume_template_with_fragments.rtf" and is discussed in Example 13 (below) and the section on file fragments.  To create text files (cover letters or resumes, respectively) from these template files, double-click on the Resume Randomizer program, "resume-randomizer.exe" and follow the prompts that will ask which template to use and how many cover letters or resumes to create.
+<h3>Output of resume-randomizer.exe</h3>
+<p>The resume-randomizer.exe program produces a codebook file, plus four files for each resume.  All the created files are plain-text.  The resume itself ends in ".doc".  Since the file is plaintext, it does not need to be opened by Microsoft Word (or Open Office), but can be loaded into any text editor or webbrowser.  Its extension can be changed to ".txt" or ".html" (or ".tex"), to make it easier to load in a different program.</p>
+<p>The files ending in ".sav", ".txt", and ".csv" are data files that contain the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  These data files are meant to assist analysis of experimental results with respect to resume text.  Each of these files contains sufficient information to reconstruct the resume from the template:
+<ul>
+<li>The ".txt" file contains just the filename for the resume and then a tab-delimited list of the choices made by the program in creating the resume.  The choices are numbers 0 through n-1 where n is the number of subsections.  So if the program generated a resume by randomly always choosing the first option in each Random section, the ".txt" file would contain the filename followed by zeros, all separated by tabs.  Parsing this information requires understanding the structure of the template.  Note that the FileGather.exe program will gather all of the information from these files into a single file to make it easier to load into another program (e.g., Excel).
+<li>The ".sav" file contains several lines of explanatory text describing how the resume was generated, and then a description of how to read the rest of the file.  The rest of the file consists of pairs of lines.  The first line in each pair is the description (or tag) of the section that required a choice.  The second line is the choice that was made (a number 0 through n-1 where n is the number of subsections).  The inclusion of the section information makes the information in this format easier to parse.
+<li>The ".csv" file is meant to make it easier to load the data into an analysis program (e.g., Stata).  It consists of comma-separated text, with one line containing variable names (e.g., the identification of the section making a choice), and a second line with the choices made by each Random and Dependent section, for each iteration. (Note that the Dependent section choices <em>should</em> be duplicates of the Random sections they depend upon.)  To load the data into Stata, use the "import delimited" and append commands; for example, see the section on "Reading in, and combining data from ASCII (text) files" at the UCLA: Academic Technology Services, Statistical Consulting Group's <a href="http://www.ats.ucla.edu/stat/stata/faq/append_many_files.htm" target="_blank">Stata FAQ</a>.  Beware that the data saved to the ".csv" files is in a different format than the data saved to the ".txt" and ".doc" files.  First, the variable names are not the same as the section labels, due to the inclusion of the iteration.  Second, the text "v" is prepended onto the point labels.  For example, if section 1-2 is Random and repeating with start 10, end 14, interval 2, then the variable names would contain v1-2-iter10, v1-2-iter12, and v1-2-iter14.  Third, the choices on the second line run from 1 through n, where n is the number of subsections.
+</ul>
+</p>
+<p>The single codebook file ends in ".xls".  It is a tab-delimited file.  Each line contains the text for a Leaf, along with the parent section's label (e.g., 1-3-8), and the number of this Leaf in that parent section.  The codebook is meant to assist interpretation of the ".csv" files, which contain the number of the Leaf selected for each Random or Dependent section in each iteration.  The codebook is particularly useful when the template contains "file fragments" because the text from the fragments are collated into the codebook along with the parent section label and the Leaf number.</p>
+<ul>
+<li>If the program finds one or more existing codebook files for the template file, it will check to see if the last-modified codebook is correct for the current template.  If there is a previous codebook and it is correct, no new codebook is created.  If the program does not find a codebook file, or the codebook file is not correct, a new codebook file will be created.  The program will not overwrite previous codebook files (the new codebook's filename will contain the lowest available integer).
+<li>Keeping multiple codebooks for the same template file may be necessary if 1) the same template filename is used to generate resumes before and after changes to the template itself, and 2) the experimenter wants to analyze data from both the pre-edit and post-edit sets of resumes.  Specifically any changes to the template that would affect the data stored in the codebook could necessitate multiple codebooks (some template changes will not affect the Leafs and so will not alter the codebook).  In that case:
+<ul>
+<li>The experimenter should keep copies of both the template and the codebook from before and after those edits.  The experiment must also keep track of which resumes correspond to which template file and codebook file.
+<li>One simple approach to avoiding this issue is to always change the template's filename whenever it is edited, and ensure that the new filename is unique (e.g., a version number in the filename).  In this manner only one codebook file will be created for each template file.
+</ul>
+</ul>
+
+<hr>
+<h2><a name="examples">Examples</a></h2>
+<h4>Example 1, basic operation</h4><input type="button" value="Load Example 1" onClick="parent.loadExample1()">
+Set the first drop down box above to 'Leaf'.  There should only be one text box.  Enter "Hello World" into that text box.  Save the template as described above and run the Resume Randomizer program.  From the menu that appears, choose the template file that was just saved.  When asked how many resumes to make, answer '2'.  Two files ending in ".doc" will be created, each containing just the text "Hello World".  The names for those two text files will start with the name of the template file, then the date (in Year-Month-Day-Hour-Minute-Second format), and then some underscores separating numbers that distinguish the resumes created at the same time (described in more detail in another example below).
+<h4>Example 2, multiple text blocks</h4><input type="button" value="Load Example 2" onClick="parent.loadExample2()">
+Set the first drop down box to 'Constant'.  A second drop down box will be right next to the one you just changed.  This second drop down box specifies the number of sub-points under this point in the outline.  Set that second drop down box to '2'.  There are now two sub-points with labels '1-1' and '1-2'.  Set the drop down box for each of them to 'Leaf'.  In the text box for '1-1', the upper 'Leaf', enter "Hello".  In the text box for '1-2', the bottom 'Leaf', enter "World".  As in the first example: save the template, run the Resume Randomizer program and create a few resumes from this template.  The generated resumes should all contain the text, "HelloWorld".  Spaces or blank lines can be entered in the text boxes of the template to put spaces or blank lines between the words in the resume files.
+<h4>Example 3, random selections</h4><input type="button" value="Load Example 3" onClick="parent.loadExample3()">
+Set the template up as for Example 2, then set the first drop down box to 'Random'.  As above, save the template, run the Resume Randomizer program, and generate some resumes for this template.  Some of the resumes will contain the text "Hello" and the others will contain the text "World".  If a large enough number of resumes are generated, half of them should contain each result.
+<h4>Example 4, nested random selections and non-uniform probabilities</h4><input type="button" value="Load Example 4" onClick="parent.loadExample4()">
+Set the point labeled '1' (the first outline point) to 'Constant' with 3 sub-points (set in the drop-down box just to the right of the type).  Set the '1-1' point to a 'Leaf' with the text "Hello,".  Set the '1-2' point to 'Random' with 2 sub-points.  Set '1-2-1' to 'Random' with 2 sub-points, each a 'Leaf'.  For the text of '1-2-1-1' enter "John".  For the text of '1-2-1-2' enter "Bob".  Set '1-2-2' to a 'Leaf' with the text "Mary".  Finally, set '1-3' to a 'Leaf' with the text ",Bye".  As above, save the template, run the Resume Randomizer program, and generate some resumes for this template.  Approximately half of the resumes will contain "Hello,Mary,Bye", one quarter will say "Hello,John,Bye", and one quarter will say "Hello,Bob,Bye".
+<h4>Example 5, repeated random selections</h4><input type="button" value="Load Example 5" onClick="parent.loadExample5()">
+Set the template up as for Example 4.  Then for '1-2' check the 'Repeat' checkbox (described in detail below).  Set the 'start' value to 0, the 'end' value to 100, and the 'interval' value to 1.  Generate some resumes.  Now each resume will contain 100 names, each randomly chosen.  Again, "Mary" will appear about half the time, "John" one-quarter of the time, and "Bob" the remainder.
+<h4>Example 6, matched random selections with same choice</h4><input type="button" value="Load Example 6" onClick="parent.loadExample6()">
+Set the template up as for Example 4 again.  Then for '1-2' check the 'Matched' checkbox (described in detail below).  Select the 'Match Same' radio button.  As above, save the template, and run the Resume Randomizer program.  This time, after asking "How many?" the program will ask how many resumes to match.  If the first question is answered with '5', and then the program is told to match '3' resumes, a total of 15 resumes will be created.  The names of the resume files will end in "_X_YofZ.doc" where X is the number of the batch (1 through 5 in this example), Y is the number of the resume within the batch (1 through 3 in this example), and Z is the total number of resumes in each batch (3 in this example).  Each of the resumes in a batch (i.e., with the same X value in the filename) will have chosen the same choice for the name in this example.  Different batches of matched resumes choose separately from each other batch.
+<h4>Example 7, matched random selections with different choices</h4><input type="button" value="Load Example 7" onClick="parent.loadExample7()">
+Set the template up as for Example 6.  Then select the 'Match Different' radio button for point '1-2' (instead of 'Match Same').  Each resume in a batch will now be forced to choose a different choice than all the other resumes in that batch.  Since there are only two choices for that 'Random' point, the generated batches cannot be larger than 2 resumes without generating an error.  Generate some resumes matched in pairs, and observe that in each pair one of the resumes will contain "Mary" and the other will contain either "John" or "Bob".
+<h4>Example 8, repeated random selections and non-uniform probablities without nested sections</h4><input type="button" value="Load Example 8" onClick="parent.loadExample8()">
+Set the first point to 'Random' that repeats 100 times and has 4 sub-points, each a 'Leaf'.  Set the text for the first three 'Leaf's to "a" and the text for the fourth 'Leaf' to "b".  Generate some resumes.  In each resume, "a" should appear three times as often as "b".
+<h4>Example 9, using special text while repeating, and "do not print doubles"</h4><input type="button" value="Load Example 9" onClick="parent.loadExample9()">
+Set the first point to 'Random' with two sub-points, each a 'Leaf'.  Make the 'Random' repeat with start 1990, end 2000, interval 2, to signify that jobs will be chosen every two years starting in 1990 and stopping before 2000.  Set the text for the '1-1' 'Leaf' to "%current% - %next%1% waiter. ", and the text for the '1-2' 'Leaf' to "%current% - %next%1% chef. ".  Generate some resumes and note how the special text inside each 'Leaf' is replaced with the values from the counter.  If the 'Random' point was also marked "Do not print doubles", a possible output would be "1990 - 1994 waiter. 1994 - 1996 chef. 1996 - 2000 waiter."
+<h4>Example 10, typical resume</h4><input type="button" value="Load Example 10" onClick="parent.loadExample10()">
+Open the "example_resume_template.rtf" file provided with the Resume Randomizer program.  Copy the text inside that file and paste it into the text box on the right, replacing any text already there.  Press the "Load this template" button.
+<br>You may then wish to check the "Hide" checkbox next to the topmost section, to see just the text and structure of the template.
+<br>This template creates resumes for one of two people, "Linda" and "Mary", which are chosen using the '1-1' 'Random' point.  That point is set to Match Different, so that when creating a matched pair, one resume will get the text for "Linda" and the other will get the text for "Mary".  The '1-5' 'Random' point contains all of the characteristics for the work history.  The history repeats for 10 years from 2003 to 1993.  That point is set to Match Same so that both resumes in the matched pair will take the same sub-point each year.  The first sub-point, '1-5-1' is a 'Leaf' with no text in the text box.  So when this choice is picked, nothing is added to the resume for that year.  The other sub-points, '1-5-2' through '1-5-6' are all 'Random' points with two sub-points each.  If the program chooses '1-5-2', then it will choose between '1-5-2-1' and '1-5-2-2', which may be considered functionally equivalent jobs (cashiers at large stores).  Furthermore, the points labeled '1-5-2' through '1-5-6' are all set to Match Different, so that the "Linda" resume will get one of the two functionally equivalent jobs, and the "Mary" resume will get the other functionally equivalent job.
+<br>Notice that the 'Leaf' points for the work history contain special text (explained below) to print the years worked.  Also note the use of "Do not print doubles" (explained below) to prevent printing job text twice in a row.  Generate a few resumes from this template and compare the results to the template.
+<br>This template uses the "Non-uniform chance for immediate repeat" setting to specify the probability that the same work history will be chosen that was picked the previous year.
+<h4>Example 11, choosing the same subsections using dependent sections</h4><input type="button" value="Load Example 11" onClick="parent.loadExample11()">
+Set the first point to 'Constant' with three subsections.  Set the first subsection to 'Random' with two subsections, both of type 'Leaf'.  Set the text for those 'Leaf's to "I want a job. " and "Do you have an opening? ".  Set section '1-2' to a 'Leaf' with the text, "Thank you, John. ".  Set section '1-3' to 'Dependent'.  It will automatically select the first (and currently only) 'Random' section ('1-1') on which to depend.  Set sections '1-3-1' and '1-3-2' to 'Leaf's with "john111@me.com" and "john222@me.com" respectively.  Generate some resumes and see how "I want a job. " is always followed by "john111@me.com", while "Do you have an opening? " is always followed by "john222@me.com".
+<h4>Example 12, formatting resumes using templates that generate HTML</h4><input type="button" value="Load Example 12" onClick="parent.loadExample12()">
+In this example, you can see how the program can be used to generate HTML, including using Cascading Style Sheets (CSS) to set formatting, along with various HTML tags for italics, horizontal rule, etc.
+<h4>Example 13, file fragments</h4><input type="button" value="Load Example 13" onClick="parent.loadExample13()">
+In this example, section 1-3-2 demonstrates the special text for a file fragment, %file%XXXXX%.  File fragments allow a file containing multiple Leafs to be substituted into a template.  See further explanation in the "Advanced Use" section.
+<h4>Example 14, TeX for formatting</h4><input type="button" value="Load Example 14" onClick="parent.loadExample14()">
+Similar to Example 12, by having the template generates valid TeX files the resulting resumes can contain formatting.  Note that the .doc files will have to be compiled using (for example) LaTeX or pdfTeX.  This approach makes it easy to generate pdfs of all the resumes.  If the resumes need to be images (e.g., jpeg, tiff, png) then ImageMagick can batch convert the PDF or postscript files.
+<h4>Example 15, template-created variables, %store% and %recall%</h4><input type="button" value="Load Example 15" onClick="parent.loadExample15()">
+In this example, the email address in Leaf 1-3 is based on the random selection of the first name (Random section 1-1), and the random selection of the last name (Random section 1-2).  It would be possible to "nest" the random section(s) for the last name inside the random section for the first name, but that would require duplicating the random selection of the last name in two places.  Instead, each leaf that contains a first name stores a template-created variable "first_name", and each leaf that contains a last name stores a variable "last_name".  Then, the email is created by recalling those two variables and adding the name of the email service provider.
+<h4>Example 16, first sub-point percentage</h4><input type="button" value="Load Example 16" onClick="parent.loadExample16()">
+In this example, the first subpoint of a random section is selected with a specific probability.  If you create a resume you will see that 2/3rds of the letters are "a", and the remaining sub-points ("b" and "c") are chosen with uniform probability. By nesting random sections, each with a "first sub-point percentage", it is possible to exactly specify probabilities for each possible leaf.
+<hr>
+
+<h2><a name="advanced">Advanced Use</a></h2>
+<h3>Formatting resumes:</h3>If the resumes must have formatting (e.g., fonts, italics, right justification, text color, etc.) there are four methods of applying that formatting:
+<ol><li>First, it can be done manually, though if many resumes are being created the formatting could take significant time.
+<li>Second, it can be done programmatically, e.g., with a macro in Microsoft Word.  Creation of such macros may take careful thought, since the resumes can vary in length and content.  It may be necessary to add special "tags" (combinations of letters and numbers) to the template, so that the macro can find the starts and ends of different sections or words that you want to have different formatting.  Removal of those tags can be part of the macro itself.
+<li>Third, templates can be created that generate HTML, as in Example 12 above.  The resumes will still end in ".doc", and can be opened with a webbrowser, or Microsoft Word, or Apache OpenOffice Writer.  Then, any formatting can be contained in the HTML, and in fact, the formatting can be randomized just like any other aspect of the resumes.
+<ul><li>Generating HTML (and therefore webpages) significantly increases the capabilities of the resulting "resumes", allowing for tables, lists, images, hyperlinks, ads, etc.  It is even possible to put javascript code into the template, which will be run when the resumes are opened by a web browser (or when the user click a button or moves the mouse over a certain area), so it is possible to use this program to put programs into your HTML "resumes".</ul>
+<li>Fourth, templates can be created that generate TeX (see Example 14 above).
+</ol>
+<h3>"Hide" setting:</h3>In order to reduce clutter, outline points marked "Hide" do not display any of the controls (i.e., buttons, drop-down boxes, text entry areas) for themselves or their subpoints.  Instead, 'Random' and 'Dependent' points are displayed with a black border inside of which their subpoints are displayed, each surrounded by a grey border. 'Constant' and 'Leaf' points do not create borders.  This setting has no effect on generation of resume files and does not work in Internet Explorer.
+<h3>Non-equal likelihood:</h3>When choosing between two (or more) options for characteristics (e.g., "Linda" vs. "Mary"), the experimenter may not want each option to be chosen an equal amount of the time.  Four methods exist for choosing characteristics so that they appear with non-uniform probability.
+<ol>
+  <li>Nest random sections (Example 4 above).
+  <li>Copy that characteristic, so that the 'Random' point has n chances to choose the copied characteristic (where n is the total number of copies) (Example 8 above).
+  <li>Use the setting called "First sub-point percentage" (Example 16 above). That setting specifies the percentage that the first sub-point in the Random section will be chosen, and is only considered after all other settings are addressed (i.e., it does not supersede or conflict with any other setting such as "Non-uniform chance for immediate repeat"). If the first sub-point is not chosen (either randomly, or due to another setting like "Always different when repeat") then the remaining sub-points each have a uniform probability of being chosen. If a file fragment (see below) is loaded as the Random section's first sub-point, the first leaf in the fragment will be the one to which the specific probability is applied. To get a specific probability for each of several leaf texts, simply nest Random sections each with the "First sub-point percentage" setting.
+  <li>Use the setting called "Non-uniform chance for immediate repeat" which is described below in the section marked "Repeating" and does not affect the chance that a characteristic will be initially chosen (Example 10 above).
+</ol>
+<h3>Matched "pairs":</h3>This option allows the experiment to create matched resumes based on experimenter-defined matches.  The maximum number of possible matches is set at 199 (2-4 is more common in the literature).  There are three ways resumes can be matched.  The first way is that any of the 'Random' points can be set to "Match Same", in which case the matched resume files will all choose the same characteristic (Examples 6&10 above) for the same iteration. The second way is that any of the 'Random' points can be set to "Match Different", in which case the resume files will be generated such that no two files will choose the identical characteristic (Examples 7&10 above) for the same iteration. Make sure that any point marked "Match Different" contain at least one characteristic per matched resume.  The third way is that any of the 'Random' points can be set to "Match Only One Ever", in which case only one resume file can ever contain each of the sub-sections.  The difference between "Match Different" and "Match Only One Ever" is that if there is a repeating random section (see below) with only two sub-sections and you generate a matched pair of resumes, then for "Match Only One Ever" only one resume will ever have the first sub-section (and the other resume will have the other sub-section), while with "Match Different" they can alternate so that in each iteration of the repetition the first resume could get either of the sub-sections (with its matched pair being forced to take the other sub-section).
+<h3>Repeating:</h3>This option is most useful for generating job histories where multiple jobs are picked from a single list.  If an outline point is set to "Repeat", then that point will be repeated some number of times (see Example 5 above).  When a resume is generated, a counter inside the program will be initialized to the 'start' value, and then incremented by the 'interval' value after each time the point is completed.  The repetitions will stop when the counter is equal to or past the 'end' value.
+    <p>When generating job histories, the user may desire for the same characteristic (i.e., previous jobs) not to be printed twice in succession.  Setting the option "Do not print doubles" will tell the program to not print the same characteristic upon successive repetitions until a different characteristic is chosen (see Examples 9&10).
+<p>There are five settings that affect the probability of choosing the same characteristic in multiple repetitions.  The "Same if Repeat" setting will choose the same characteristic on each repetition.  The "Always different when repeat" setting will prevent the resume from containing the same characteristic more than once.  ("Always different when repeat" is different from "Do not print doubles" because the former will print a different characteristic for each repetition, whereas the latter may only end up printing one characteristic.)  The third setting that affects probability is "Non-uniform chance for immediate repeat", which allows the experimenter to specify the exact chance of choosing the same subpoint that was chosen the last repetition.
+<br>If "do not print doubles" is checked, then two more options will be possible: "minimum # of entries" and "maximum # of entries".  If an integer greater than zero is provided for the minimum, then the random section will force the last selections to be different if necessary for there to be that number of entries.  If a number greater than zero is provided for the maximum, then the random section will force the last selections to be the same if necessary for there to be no more than that number of entries.  Values of 0 or less for those entries will be ignored.
+<br>These five settings are <em>mutually-exclusive</em> except for minimum & maximum number of entries.
+<p>To assist with the creation of work histories, special text in a 'Leaf' will be replaced with values from the repetition counter (see Examples 9&10 above).  The purpose behind this feature is to allow the repetition over a set of jobs, where the description of each job contains the years worked.  Those years should increment as the work history is being created, and should follow the repetition counter.  The text %start% will be replaced with the start value.  %end% will be replaced with the end value.  %current% will be replaced with the value of the counter at the time of that choice.  %currentPlusInterval% will be replaced by the sum of the current value of the counter and the counting interval.
+<br>%next% is also a special text, but it must be followed by the label of a 'Random' point and then a percent sign, '%', e.g., "%next%1-3-2%". (The "label" of a point is the string of numbers and minus signs directly to the left of the 'Leaf'/'Random'/'Constant'/'Dependent' drop-down box. The top point's label is 1, its first subpoint is 1-1, and its second subpoint is 1-2.) The %next% special text will be replaced by the current value of the specified counter when that repetition makes a different choice than it did previously.  If any %next% instances are not replaced before the repetitions finish, they will be replaced by the end value.
+<p>Only 'Random' points can be marked "repeating".  To repeat a 'Constant', 'Dependent', or 'Leaf' point, create a repeating 'Random' point with a single subpoint that will then get chosen each repetition.
+
+<h3>Dependent sections:</h3> Dependent sections are used to link a random selection at one place in the resume to another selection elsewhere in the resume.  When a 'Dependent' section is first added to a template, it will automatically depend upon the first 'Random' section in the template.  The drop-down box after "on section labeled" can be used to change which 'Random' section to depend upon.  The 'Dependent' section will automatically have the same number of subsections as the 'Random' section on which it depends.  If the template does not contain at least one 'Random' section above the 'Dependent' section, an error will be displayed.
+<p>When the resume-randomizer program generates resumes from a template, the program stores the last choice for each 'Random' section.  When the program comes to a 'Dependent' section, it makes the same choice that was last made by the depended-upon 'Random' section.  For example, dependent sections are useful if you are generating resumes and you want the phone number to be dependent on the name, the year of high school graduation, or some other random selection made while generating the resume.  For another example, if you are generating resumes for different jobs at random and certain education entries need to be paired with certain certificates.  See Example 11 above.
+
+<h3>File fragments:</h3> "File fragments" allow a template to load text from a separate file. For example, the example template "example_resume_template_with_fragments.rtf" provided with this software uses text contained in the "example_job_history_fragment.rtf" fragment to add text to the job history section of a resume. <em>The purpose of file fragments</em> is to simplify text entry of many leaf sections.  Without file fragments, the user must either enter the text for each leaf into this webpage, or learn all the text formatting required to write the template files manually.  Using file fragments, the complicated aspects of the template can be created using this webpage, while long lists of leaf sections can be collated into a plain text file using minimal formatting.
+
+<p>To load a fragment, use the special text "%file%XXXXX%" at the start of a line, substituting a filename for the "XXXXX"; see section 1-3-2 of Example 13 above.  The first line of the named file should start with "*fragment*", and the file should contain leaf sections that start with a line "*leaf*" and end with a line "*end_leaf*", similar to the template format but without any section labels.  Any lines outside of a *leaf*...*end_leaf* block will be ignored, so blank lines can be inserted to make it easier to read the fragment file.  When the resume-randomizer.exe program is run, it checks the template for any %file% special texts, and inserts the fragments there as though the template contained those leaf subsections.  In the example, the %file% special text is in section 1-3-2, a leaf of the random section 1-3, so after the fragment is inserted, random section 1-3 will have a total of 5 subsections (Target, Wal-Mart, Starbucks, Office temp, and the Random section for Best Buy).
+
+<p>File fragments can only contain "leaf" sections.
+
+<p>File fragments can contain any special texts. Except for %next%, all the special texts are used the same as outside of a file fragment (including %file%, so file fragments can reference other file fragments).  Since the file fragment does not contain any "random" sections, it does not make sense to specify the label with the %next% special text.  Therefore, in file fragments (and only in file fragments), "%next%" is not followed by a label (or a third '%'), and instead will automatically refer to the repeating "random" section that is nearest to the %file% special text.
+
+<p>Note, if you want a job history where each of the matched resumes gets an equivalent but different job title at each repetition, and you want to store those job titles in file fragments, here is one way: start with a random section, where each subsection is a Constant subsection containing a Leaf followed by a Random.  The Leaf would have the special text for the counter (aka date), e.g., "%next%1-3% - %current%".  Each Random section would be MatchDifferent, and would have a single Leaf subsection.  Those Leaf subsections would each reference a different file fragment (containing equivalent but different jobs)...note that you wouldn't want to put %current% or %next% in the file fragments, because the nearest Random would be the one with MatchDifferent.  So there might be a file fragment containing equivalent but different office jobs, then another fragment containing equivalent but different waitressing jobs, etc.
+
+<p>Further note, if a dependent section points at a random section with one or more leaf subsections that contain file fragments, the gui will give the dependent section the wrong number of subsections.  In this case, use file fragments containing the exact same number of Leaf sections in both the Dependent section and the master Random section.
+
+<h3>Template-created variables, %store% and %recall% special text:</h3>
+Another way of having a Random section affect later text is through template-created variables.  When the '%store%XXXX%YYYY%' special text is encountered in a Leaf, a variable is stored with the name XXXX and the value YYYY, where XXXX and YYYY can be any combination of numbers, letters, spaces, and <em>some</em> symbols (underscore definitely works, the percent sign does not work).  When the '%recall%XXXX%' special text is encountered in a Leaf, the resume-randomizer program checks to see if a variable has been stored with the name XXXX, and if so, it replaces the special text with the value ('YYYY' above) that was stored in the variable with that name.  If no variable with that name has been stored, an error occurs.
+<p>See Example 15 above, which uses template-created variables to create email addresses that are based on both the first name and the last name (and could be based on age, race, etc.) without nesting Random sections.
+<hr>
+<h2><a name="changelog">Changelog</a></h2>
+<ul>
+<li>Version 23 on 11/1/2015: The csv files and codebook prepend points with "v".  For example, point 1-3-5-11 will be saved in the file as "v1-3-5-11".  This change is to help with importing the data into Excel (which otherwise tries to format the point identifiers as dates), and Stata (which will not import variable names that start with numbers).
+<li>Version 22 on 6/20/2015: Random sections can now have a non-uniform percentage change for the first sub-point. The executable provides more information if it runs into an error writing the codebook.
+<li>Version 21 on 4/21/2014: The instructions now use the terms "Match Only One Ever" and "Match Different" to correspond to the text in the GUI.  The executable better handles malformed templates when creating the codebook.  A bug was fixed in which templates that are exactly the same except the later one is missing one or more leafs at the end will now generate a new codebook.  (Codebooks generated by the pre-bugfix code should not demonstrate any detrimental effects since the missing Leafs will be in the codebook but not in any of the generated text files.)  The executable's error messages have been updated to match the text used in the GUI, and the error handling is standardized so that all errors are associated with a unique return value.  The executable prints the date of its latest version.
+<li>Version 20 on 2/7/2014: The executable prints the version number.
+<li>Version 19 on 9/6/2013: Never overwrites the codebook, instead adding a unique number to the filename.  Requests a keypress when the resume generator encounters an error, to prevent the window from closing too quickly.  Ensures that the screen does not scroll when "hiding" sections in the template generator.  Clarifies instructions/explanations in template generator.  Prints error to webpage if the wrong html file is loaded.  Adds HTML meta tags.
+<li>Version 18 on 3/12/2013: Creates a codebook from the template, each time the program runs.  The codebook is an xls file containing one line per Leaf, with the parent section, the leaf's number in the parent, and the Leaf's text.
+<li>Version 17 on 11/21/2012: Removes two printed messages used when adding the functionality for minimum/maximum number of entries.
+<li>Version 16 on 7/28/2012: Adds minimum number of entries and maximum number of entries, so that Repeating Random section can have a specified number of entries when "do not print doubles" is set.
+<li>Version 15 on 7/12/2012: Adds output of csv files to facilitate loading the data into data analysis programs (e.g., Stata).  Updates Explanation section of webpage to describe the data files that are generated.  Clarifies the resume-randomizer.exe program's questions about the number of batches of matched resumes.
+<li>Version 14 on 7/10/2012: Adds Matched Only One Ever, which is similar to Matched Different but with Matched Only One Ever each subsection of a random section (that repeats) can only ever be in one resume (think of it as choose-without-replacement).
+<li>Version 13 on 7/10/2012: Bugfix: this webpage better checks for the start and end of sections (i.e., the tags *leaf*, *end_leaf*, etc). The textareas (for text entry above) now automatically resize.  <em>Inside file fragments</em> the *leaf* and *end_leaf* special text can now be followed by arbitrary text or spaces.  Can now specify whether or not to include the date & time on filenames.
+<li>Version 12 on 7/8/2012: Bugfix: Now correctly handles unexpected end-of-file while reading templates.
+<li>Version 11 on 7/4/2012: Adds example for templates that generate TeX documents.  Adds template-created variables (via %store% and %recall% special texts).
+<li>Version 10 on 6/27/2012: Adds file fragments.  Adds example for templates that generate HTML documents.
+<li>Version 9 on 6/20/2012: Bugfix: when adding a section the numbers got messed up. Adding and deleting sections now properly reloads to show a section near where the change occurred. When adding or deleting sections, dependent sections now update their master value appropriately, and %next% special text updates similarly.  Adds the browse button to load templates from disk, but the code does not work on Internet Explorer.  Also improves error checking so that resume-randomizer throws an error if %next% references a non-Random section, and to ensure that start/end/interval are either integers or floats.
+<li>Version 8 on 5/25/2012: Adds Dependent sections.
+</ul>
+<p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>.
+<hr>
+<small>Copyright 2015 Ryan Beasley and Joanna Lahey.</small>
+</BODY>
+</HTML>
