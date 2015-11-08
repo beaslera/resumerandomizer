@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+# Version 24 11/8/2015: When outputting the csv, the column headers for the points use underscores to separate numbers instead of dashes, e.g., "v1_3". This change is to help with importing the data into Stata, which cannot have variable names containing dashes.  Ditto for the parents in the codebook, so that they match the csv files.
 # Version 23 11/1/2015: When outputting the csv, the column headers for the points have their values prepended by "v", e.g., "v1-3". This change is to help with importing the data into Stata, which cannot have variable names that start with numbers.  Ditto for the parents in the codebook, so that Excel formats that column as string.  Also, the csv files no longer have spaces after each comma.  Licensed under Apache License 2.0.
 # Version 22 6/20/2015: If attempting to print out the codebook fails because the program does not find an expected start tag, it prints a section of the template (including fragments) with line numbers, to aid in debugging. Refactored the generation of the codebook into a function.  Can now specify the percentage chance for the first sub-point in a random section...the remaining sub-points are uniform probability.
 # Version 21 4/21/2014: Checks for malformed start tags (e.g., empty lines) while creating codebook.  Bugfix, correctly creates new codebook when the new codebook is the same except missing one or more leafs at the end. Bugfix, malformed templates correctly abort codebook creation.  Better error messages and error handling.
@@ -45,8 +46,8 @@
 #Putting a space before the *leaf* special text in a fragment should not cause the program to fail.
 #I should just put repeatNever here like matchDifferent...simplify the below if-elif block of getChoiceFor...
 
-Version = 23
-Date = "November 1, 2015"
+Version = 24
+Date = "November 8, 2015"
 
 import os
 import glob
@@ -341,7 +342,7 @@ def printCodebook(inFile, fileName):
     if "*leaf*" in myText:
       splitLabel = myLabel.split("-")
       myParent = '-'.join(splitLabel[:-1])
-      outFile.write("v" + myParent + "\t" + splitLabel[-1] + "\t")
+      outFile.write("v" + myParent.replace("-", "_") + "\t" + splitLabel[-1] + "\t")
       retval = writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, currentString, currentPlusIntervalString, makeCodeBook)
       if (retval < 1):
         return retval
@@ -846,7 +847,7 @@ def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, save
   print >>saveChoicesFile, chosenSubelement
   txtChoicesFile.write('\t'+str(chosenSubelement))
   global globalCsvNames, globalCsvData
-  globalCsvNames += ",v" + myVariableName
+  globalCsvNames += ",v" + myVariableName.replace("-", "_")
   globalCsvData += "," + str(chosenSubelement+1)
   for i in range(chosenSubelement):
     retval = skipElement(inFile, currentLine)
@@ -1039,7 +1040,7 @@ def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferent
   print >>saveChoicesFile, chosenSubelement
   txtChoicesFile.write('\t'+str(chosenSubelement))
   global globalCsvNames, globalCsvData
-  globalCsvNames += ",v" + myVariableName
+  globalCsvNames += ",v" + myVariableName.replace("-", "_")
   globalCsvData += "," + str(chosenSubelement+1)
   for i in range(chosenSubelement):
     retval = skipElement(inFile, currentLine)

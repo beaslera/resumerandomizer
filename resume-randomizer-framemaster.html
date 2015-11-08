@@ -30,6 +30,7 @@
 //If you can read this on your web browser, javascript is not working.  Fix javascript on your web browser.
 
 // This javascript program is used with the Resume Randomizer program.  This program (consisting of three pages) provides a graphical user interface that assists users in generating templates.  Those templates are then used by the executable file to generate random text (containing the characteristics described in the template.
+// Version 24 11/8/2015: The csv and codebook files use underscores instead of dashes in the names of the points, to ease importing into Stata.
 // Version 23 11/1/2015: The csv and codebook files prepend "v" onto the names of the points, to ease importing into Excel and Stata.
 // Version 22 6/20/2015: Adds support for having a different percentage chance for the first sub-point of a Random section.  Switched from parseFloat() to Number() because the former will convert '1xaoeu32' to the number 1, while the latter returns NaN. Added more information to alerts when parsing percentage inputs to floats fails. Textareas are now automatically resized to fill the width of the frames.
 // Version 21 4/21/2014: Changes the text of the instructions to match the GUI.
@@ -54,7 +55,7 @@
 // Version 2 6/22/2007: Replaced all instances of the text "style" with "template".
 // Version 1 6/20/2007
 
-var versionNumber = 23;
+var versionNumber = 24;
 var templateMad = new Array();
 var guiHash = "#";
 clearTemplateNoReload();
@@ -650,98 +651,98 @@ function insertTab(event,obj) {
 }
 
 function loadExample1() {
-    var tempText = "23 gui version number\n*leaf* 1\nHello World\n*end_leaf* 1\n";
+    var tempText = versionNumber + " gui version number\n*leaf* 1\nHello World\n*end_leaf* 1\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample2() {
-    var tempText = "23 gui version number\n*constant* 1 2\n*leaf* 1-1\nHello\n*end_leaf* 1-1\n*leaf* 1-2\nWorld\n*end_leaf* 1-2\n*end_constant* 1 2\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 2\n*leaf* 1-1\nHello\n*end_leaf* 1-1\n*leaf* 1-2\nWorld\n*end_leaf* 1-2\n*end_constant* 1 2\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample3() {
-    var tempText = "23 gui version number\n*random* 1 2\n*leaf* 1-1\nHello\n*end_leaf* 1-1\n*leaf* 1-2\nWorld\n*end_leaf* 1-2\n*end_random* 1 2\n";
+    var tempText = versionNumber + " gui version number\n*random* 1 2\n*leaf* 1-1\nHello\n*end_leaf* 1-1\n*leaf* 1-2\nWorld\n*end_leaf* 1-2\n*end_random* 1 2\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample4() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample5() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2 *repeat* 0 100 1\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2 *repeat* 0 100 1\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample6() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2 *matchSame*\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2 *matchSame*\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample7() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2 *matchDifferent*\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*leaf* 1-1\nHello,\n*end_leaf* 1-1\n*random* 1-2 2 *matchDifferent*\n*random* 1-2-1 2\n*leaf* 1-2-1-1\nJohn\n*end_leaf* 1-2-1-1\n*leaf* 1-2-1-2\nBob\n*end_leaf* 1-2-1-2\n*end_random* 1-2-1 2\n*leaf* 1-2-2\nMary\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n,Bye\n*end_leaf* 1-3\n*end_constant* 1 3\n\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample8() {
-    var tempText = "23 gui version number\n*random* 1 4 *repeat* 0 100 1\n*leaf* 1-1\na\n*end_leaf* 1-1\n*leaf* 1-2\na\n*end_leaf* 1-2\n*leaf* 1-3\na\n*end_leaf* 1-3\n*leaf* 1-4\nb\n*end_leaf* 1-4\n*end_random* 1 4\n";
+    var tempText = versionNumber + " gui version number\n*random* 1 4 *repeat* 0 100 1\n*leaf* 1-1\na\n*end_leaf* 1-1\n*leaf* 1-2\na\n*end_leaf* 1-2\n*leaf* 1-3\na\n*end_leaf* 1-3\n*leaf* 1-4\nb\n*end_leaf* 1-4\n*end_random* 1 4\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample9() {
-    var tempText = "23 gui version number\n*random* 1 2 *repeat* 1990 2000 2\n*leaf* 1-1\n%current% - %next%1% waiter. \n*end_leaf* 1-1\n*leaf* 1-2\n%current% - %next%1% chef. \n*end_leaf* 1-2\n*end_random* 1 2\n";
+    var tempText = versionNumber + " gui version number\n*random* 1 2 *repeat* 1990 2000 2\n*leaf* 1-1\n%current% - %next%1% waiter. \n*end_leaf* 1-1\n*leaf* 1-2\n%current% - %next%1% chef. \n*end_leaf* 1-2\n*end_random* 1 2\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample10() {
-    var tempText = "23 gui version number\n*constant* 1 13\n*random* 1-1 2 *matchDifferent*\n*leaf* 1-1-1\nLinda Jones\n19 Ashland St #2\nSomerville, MA  02144\n(617) 499-7724\nljones344@hotmail.com\n\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nMary E. Smith\n200 Summer St #3\nSomerville, MA  02144\n(617) 499-6971\nmsmith967@hotmail.com\n\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\n\nObjective:\n\n*end_leaf* 1-2\n*random* 1-3 2 *matchDifferent*\n*leaf* 1-3-1\nTo obtain a position as a real estate agent.\n\n*end_leaf* 1-3-1\n*leaf* 1-3-2\nTo secure a real estate position.\n\n*end_leaf* 1-3-2\n*end_random* 1-3 2\n*leaf* 1-4\n\nEmployment History:\n\n*end_leaf* 1-4\n*random* 1-5 6 *repeatNoDoubles* *repeatDifferentDouble* 50 *matchSame* *repeat* 2003 1993 -1\n*leaf* 1-5-1\n*end_leaf* 1-5-1\n*random* 1-5-2 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-2-1\n%current%-%next%1-5%	Cashier, Target, Everett, MA\n\n*end_leaf* 1-5-2-1\n*leaf* 1-5-2-2\n%current%-%next%1-5%	Cashier, Wal-Mart, Lynn, MA\n\n*end_leaf* 1-5-2-2\n*end_random* 1-5-2 2\n*random* 1-5-3 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-3-1\n%current%-%next%1-5%	Administrative Assistant, Cambridge, MA\n		Typing, filing, telephone, copying, faxing, tracking referrals, reporting to central office (attendance/insurance data), petty cash, ordering supplies.\n\n*end_leaf* 1-5-3-1\n*leaf* 1-5-3-2\n%current%-%next%1-5%	Administrative assistant/receptionist, Cambridge, MA\n		Typing, faxing, telephone, ordering supplies, data entry, contacting insurance companies, reporting co-pays to Billing office.\n\n*end_leaf* 1-5-3-2\n*end_random* 1-5-3 2\n*random* 1-5-4 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-4-1\n%current%-%next%1-5%	Receptionist	Somerville, MA\n\n*end_leaf* 1-5-4-1\n*leaf* 1-5-4-2\n%current%-%next%1-5%	Receptionist 	Cambridge, MA\n\n*end_leaf* 1-5-4-2\n*end_random* 1-5-4 2\n*random* 1-5-5 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-5-1\n%current%-%next%1-5%	Personal Care Attendant	Barton's Angels	Northampton, MA\n		Traveling to clients home, assisting in clients' needs, (Dressing, cooking meals, showers, etc.) Bringing clients to various activities\n\n*end_leaf* 1-5-5-1\n*leaf* 1-5-5-2\n%current%-%next%1-5%	Personal Care attendant	Community Network Inc.	Holyoke, MA\n		Taking care of clients in their homes on an hourly basis or livein. Normal patient care, food preparation, assisting with bathing, helping dress, and light housekeeping.  Some transportation to events.\n\n*end_leaf* 1-5-5-2\n*end_random* 1-5-5 2\n*random* 1-5-6 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-6-1\n%current%-%next%1-5%	Accounting Principals	Data Entry Clerk	Boston, MA\n		Entered timesheets and billing information.  Assisted expense department with filing.\n\n*end_leaf* 1-5-6-1\n*leaf* 1-5-6-2\n%current%-%next%1-5%	MetLife	Data Entry Clerk	Boston, MA\n		Inputting accounting entries and posting to the general ledger.  Filing, copying, sorting mail and cutting checks.\n\n*end_leaf* 1-5-6-2\n*end_random* 1-5-6 2\n*end_random* 1-5 6\n*leaf* 1-6\n\nEducation:\n\n*end_leaf* 1-6\n*random* 1-7 2 *matchDifferent*\n*leaf* 1-7-1\n2002-2003	Bremis School of Real Estate, Somerville, MA\n\n*end_leaf* 1-7-1\n*leaf* 1-7-2\n2002-2003	American Real Estate Academy; Waltham, MA\n\n*end_leaf* 1-7-2\n*end_random* 1-7 2\n*random* 1-8 2 *matchSame*\n*leaf* 1-8-1\n*end_leaf* 1-8-1\n*constant* 1-8-2 2\n*random* 1-8-2-1 2 *matchSame*\n*leaf* 1-8-2-1-1\n1996 		\n*end_leaf* 1-8-2-1-1\n*leaf* 1-8-2-1-2\n2002 		\n*end_leaf* 1-8-2-1-2\n*end_random* 1-8-2-1 2\n*random* 1-8-2-2 2 *matchDifferent*\n*leaf* 1-8-2-2-1\nDepartment of manpower & training, computer certificate\n\n*end_leaf* 1-8-2-2-1\n*leaf* 1-8-2-2-2\nComputer learning center certificate\n\n*end_leaf* 1-8-2-2-2\n*end_random* 1-8-2-2 2\n*end_constant* 1-8-2 2\n*end_random* 1-8 2\n*random* 1-9 3 *matchDifferent*\n*leaf* 1-9-1\n1955-1959	\n*end_leaf* 1-9-1\n*leaf* 1-9-2\n1962-1966	\n*end_leaf* 1-9-2\n*leaf* 1-9-3\n1967-1971	\n*end_leaf* 1-9-3\n*end_random* 1-9 3\n*random* 1-10 2 *matchDifferent*\n*leaf* 1-10-1\nHigh School Diploma, DeKalb High School; DeKalb, IL\n\n*end_leaf* 1-10-1\n*leaf* 1-10-2\nHigh School Diploma, Ames High School; Ames City, IA\n\n*end_leaf* 1-10-2\n*end_random* 1-10 2\n*leaf* 1-11\n\nLicenses:\n\n*end_leaf* 1-11\n*random* 1-12 2 *matchDifferent*\n*leaf* 1-12-1\nMassachusetts Licensed Real Estate Sales Person\n\n*end_leaf* 1-12-1\n*leaf* 1-12-2\nMassachusetts Real Estate License\n\n*end_leaf* 1-12-2\n*end_random* 1-12 2\n*leaf* 1-13\n\nReferences available on request.\n*end_leaf* 1-13\n*end_constant* 1 13\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 13\n*random* 1-1 2 *matchDifferent*\n*leaf* 1-1-1\nLinda Jones\n19 Ashland St #2\nSomerville, MA  02144\n(617) 499-7724\nljones344@hotmail.com\n\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nMary E. Smith\n200 Summer St #3\nSomerville, MA  02144\n(617) 499-6971\nmsmith967@hotmail.com\n\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\n\nObjective:\n\n*end_leaf* 1-2\n*random* 1-3 2 *matchDifferent*\n*leaf* 1-3-1\nTo obtain a position as a real estate agent.\n\n*end_leaf* 1-3-1\n*leaf* 1-3-2\nTo secure a real estate position.\n\n*end_leaf* 1-3-2\n*end_random* 1-3 2\n*leaf* 1-4\n\nEmployment History:\n\n*end_leaf* 1-4\n*random* 1-5 6 *repeatNoDoubles* *repeatDifferentDouble* 50 *matchSame* *repeat* 2003 1993 -1\n*leaf* 1-5-1\n*end_leaf* 1-5-1\n*random* 1-5-2 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-2-1\n%current%-%next%1-5%	Cashier, Target, Everett, MA\n\n*end_leaf* 1-5-2-1\n*leaf* 1-5-2-2\n%current%-%next%1-5%	Cashier, Wal-Mart, Lynn, MA\n\n*end_leaf* 1-5-2-2\n*end_random* 1-5-2 2\n*random* 1-5-3 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-3-1\n%current%-%next%1-5%	Administrative Assistant, Cambridge, MA\n		Typing, filing, telephone, copying, faxing, tracking referrals, reporting to central office (attendance/insurance data), petty cash, ordering supplies.\n\n*end_leaf* 1-5-3-1\n*leaf* 1-5-3-2\n%current%-%next%1-5%	Administrative assistant/receptionist, Cambridge, MA\n		Typing, faxing, telephone, ordering supplies, data entry, contacting insurance companies, reporting co-pays to Billing office.\n\n*end_leaf* 1-5-3-2\n*end_random* 1-5-3 2\n*random* 1-5-4 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-4-1\n%current%-%next%1-5%	Receptionist	Somerville, MA\n\n*end_leaf* 1-5-4-1\n*leaf* 1-5-4-2\n%current%-%next%1-5%	Receptionist 	Cambridge, MA\n\n*end_leaf* 1-5-4-2\n*end_random* 1-5-4 2\n*random* 1-5-5 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-5-1\n%current%-%next%1-5%	Personal Care Attendant	Barton's Angels	Northampton, MA\n		Traveling to clients home, assisting in clients' needs, (Dressing, cooking meals, showers, etc.) Bringing clients to various activities\n\n*end_leaf* 1-5-5-1\n*leaf* 1-5-5-2\n%current%-%next%1-5%	Personal Care attendant	Community Network Inc.	Holyoke, MA\n		Taking care of clients in their homes on an hourly basis or livein. Normal patient care, food preparation, assisting with bathing, helping dress, and light housekeeping.  Some transportation to events.\n\n*end_leaf* 1-5-5-2\n*end_random* 1-5-5 2\n*random* 1-5-6 2 *repeatSame* *matchDifferent*\n*leaf* 1-5-6-1\n%current%-%next%1-5%	Accounting Principals	Data Entry Clerk	Boston, MA\n		Entered timesheets and billing information.  Assisted expense department with filing.\n\n*end_leaf* 1-5-6-1\n*leaf* 1-5-6-2\n%current%-%next%1-5%	MetLife	Data Entry Clerk	Boston, MA\n		Inputting accounting entries and posting to the general ledger.  Filing, copying, sorting mail and cutting checks.\n\n*end_leaf* 1-5-6-2\n*end_random* 1-5-6 2\n*end_random* 1-5 6\n*leaf* 1-6\n\nEducation:\n\n*end_leaf* 1-6\n*random* 1-7 2 *matchDifferent*\n*leaf* 1-7-1\n2002-2003	Bremis School of Real Estate, Somerville, MA\n\n*end_leaf* 1-7-1\n*leaf* 1-7-2\n2002-2003	American Real Estate Academy; Waltham, MA\n\n*end_leaf* 1-7-2\n*end_random* 1-7 2\n*random* 1-8 2 *matchSame*\n*leaf* 1-8-1\n*end_leaf* 1-8-1\n*constant* 1-8-2 2\n*random* 1-8-2-1 2 *matchSame*\n*leaf* 1-8-2-1-1\n1996 		\n*end_leaf* 1-8-2-1-1\n*leaf* 1-8-2-1-2\n2002 		\n*end_leaf* 1-8-2-1-2\n*end_random* 1-8-2-1 2\n*random* 1-8-2-2 2 *matchDifferent*\n*leaf* 1-8-2-2-1\nDepartment of manpower & training, computer certificate\n\n*end_leaf* 1-8-2-2-1\n*leaf* 1-8-2-2-2\nComputer learning center certificate\n\n*end_leaf* 1-8-2-2-2\n*end_random* 1-8-2-2 2\n*end_constant* 1-8-2 2\n*end_random* 1-8 2\n*random* 1-9 3 *matchDifferent*\n*leaf* 1-9-1\n1955-1959	\n*end_leaf* 1-9-1\n*leaf* 1-9-2\n1962-1966	\n*end_leaf* 1-9-2\n*leaf* 1-9-3\n1967-1971	\n*end_leaf* 1-9-3\n*end_random* 1-9 3\n*random* 1-10 2 *matchDifferent*\n*leaf* 1-10-1\nHigh School Diploma, DeKalb High School; DeKalb, IL\n\n*end_leaf* 1-10-1\n*leaf* 1-10-2\nHigh School Diploma, Ames High School; Ames City, IA\n\n*end_leaf* 1-10-2\n*end_random* 1-10 2\n*leaf* 1-11\n\nLicenses:\n\n*end_leaf* 1-11\n*random* 1-12 2 *matchDifferent*\n*leaf* 1-12-1\nMassachusetts Licensed Real Estate Sales Person\n\n*end_leaf* 1-12-1\n*leaf* 1-12-2\nMassachusetts Real Estate License\n\n*end_leaf* 1-12-2\n*end_random* 1-12 2\n*leaf* 1-13\n\nReferences available on request.\n*end_leaf* 1-13\n*end_constant* 1 13\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample11() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*random* 1-1 2\n*leaf* 1-1-1\nI want a job. \n*end_leaf* 1-1-1\n*leaf* 1-1-2\nDo you have an opening? \n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\nThank you, John. \n*end_leaf* 1-2\n*dependent* 1-3 2 *master* 1-1\n*leaf* 1-3-1\njohn111@me.com\n*end_leaf* 1-3-1\n*leaf* 1-3-2\njohn222@me.com\n*end_leaf* 1-3-2\n*end_dependent* 1-3 2\n*end_constant* 1 3\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*random* 1-1 2\n*leaf* 1-1-1\nI want a job. \n*end_leaf* 1-1-1\n*leaf* 1-1-2\nDo you have an opening? \n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\nThank you, John. \n*end_leaf* 1-2\n*dependent* 1-3 2 *master* 1-1\n*leaf* 1-3-1\njohn111@me.com\n*end_leaf* 1-3-1\n*leaf* 1-3-2\njohn222@me.com\n*end_leaf* 1-3-2\n*end_dependent* 1-3 2\n*end_constant* 1 3\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample12() {
-    var tempText = "23 gui version number\n*constant* 1 5\n*leaf* 1-1\n<HTML>\n<HEAD>\n<style type='text/css'>\n.name {\n\n*end_leaf* 1-1\n*random* 1-2 2 *matchDifferent*\n*leaf* 1-2-1\n  color: black;\n  font-family: Arial, sans-serif;\n  font-size:30px\n\n*end_leaf* 1-2-1\n*leaf* 1-2-2\n  color: blue;\n  font-family: Times New Roman, serif;\n  font-size:20px\n\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n}\n</style>\n</HEAD>\n<BODY>\n<p class='name'>\n*end_leaf* 1-3\n*random* 1-4 2 *matchDifferent*\n*leaf* 1-4-1\n<center>Janet Lane</center>\n*end_leaf* 1-4-1\n*leaf* 1-4-2\n<i>Bill Gunter</i>\n*end_leaf* 1-4-2\n*end_random* 1-4 2\n*leaf* 1-5\n</p>\n<p>Is looking for a job.\n<br><font size='-1'>Preferably <em>full</em>-time.</font>\n</p><ul><li>Hard worker.\n<li>Smart.\n<li>Have car will travel.</ul>\n<hr>\n<p align=right>Thank you.</p>\n</HTML>\n*end_leaf* 1-5\n*end_constant* 1 5\n";
+    var tempText = versionNumber + " gui version number\n*constant* 1 5\n*leaf* 1-1\n<HTML>\n<HEAD>\n<style type='text/css'>\n.name {\n\n*end_leaf* 1-1\n*random* 1-2 2 *matchDifferent*\n*leaf* 1-2-1\n  color: black;\n  font-family: Arial, sans-serif;\n  font-size:30px\n\n*end_leaf* 1-2-1\n*leaf* 1-2-2\n  color: blue;\n  font-family: Times New Roman, serif;\n  font-size:20px\n\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n}\n</style>\n</HEAD>\n<BODY>\n<p class='name'>\n*end_leaf* 1-3\n*random* 1-4 2 *matchDifferent*\n*leaf* 1-4-1\n<center>Janet Lane</center>\n*end_leaf* 1-4-1\n*leaf* 1-4-2\n<i>Bill Gunter</i>\n*end_leaf* 1-4-2\n*end_random* 1-4 2\n*leaf* 1-5\n</p>\n<p>Is looking for a job.\n<br><font size='-1'>Preferably <em>full</em>-time.</font>\n</p><ul><li>Hard worker.\n<li>Smart.\n<li>Have car will travel.</ul>\n<hr>\n<p align=right>Thank you.</p>\n</HTML>\n*end_leaf* 1-5\n*end_constant* 1 5\n";
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample13() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*random* 1-1 2\n*leaf* 1-1-1\nMary\n\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nBill\n\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\n\nHistory:\n\n*end_leaf* 1-2\n*random* 1-3 3 *repeatNoDoubles* *repeatDifferentDouble* 50 *repeat* 2012 2006 -2\n*leaf* 1-3-1\n%next%1-3% - %current%	Target.\n\n*end_leaf* 1-3-1\n*leaf* 1-3-2\n%file%example_job_history_fragment.rtf%\n*end_leaf* 1-3-2\n*random* 1-3-3 2\n*leaf* 1-3-3-1\n%next%1-3% - %current%	Best Buy - cashier.\n\n*end_leaf* 1-3-3-1\n*leaf* 1-3-3-2\n%next%1-3% - %current%	Best Buy - customer service.\n\n*end_leaf* 1-3-3-2\n*end_random* 1-3-3 2\n*end_random* 1-3 3\n*end_constant* 1 3\n"
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*random* 1-1 2\n*leaf* 1-1-1\nMary\n\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nBill\n\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\n\nHistory:\n\n*end_leaf* 1-2\n*random* 1-3 3 *repeatNoDoubles* *repeatDifferentDouble* 50 *repeat* 2012 2006 -2\n*leaf* 1-3-1\n%next%1-3% - %current%	Target.\n\n*end_leaf* 1-3-1\n*leaf* 1-3-2\n%file%example_job_history_fragment.rtf%\n*end_leaf* 1-3-2\n*random* 1-3-3 2\n*leaf* 1-3-3-1\n%next%1-3% - %current%	Best Buy - cashier.\n\n*end_leaf* 1-3-3-1\n*leaf* 1-3-3-2\n%next%1-3% - %current%	Best Buy - customer service.\n\n*end_leaf* 1-3-3-2\n*end_random* 1-3-3 2\n*end_random* 1-3 3\n*end_constant* 1 3\n"
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample14() {
-    var tempText = "23 gui version number\n*constant* 1 6\n*leaf* 1-1\n\\documentclass[letterpaper,12pt,oneside]{article}\n\\title{\n\n*end_leaf* 1-1\n*random* 1-2 2\n*leaf* 1-2-1\nJim\n*end_leaf* 1-2-1\n*leaf* 1-2-2\nBill\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n}\n\\date{July 2012}\n\\begin{document}\n\\maketitle\n\n*end_leaf* 1-3\n*leaf* 1-4\n\\section{Job History}\nHere the job history is in an enumerated list.\n%comments can be added after a percent sign, TeX will not add them to the final document.\n\\begin{enumerate}\n*end_leaf* 1-4\n*random* 1-5 2\n*leaf* 1-5-1\n\\item Birdwatching\n\n*end_leaf* 1-5-1\n*leaf* 1-5-2\n\\item Counting sheep\n\n*end_leaf* 1-5-2\n*end_random* 1-5 2\n*leaf* 1-6\n\\end{enumerate}\n\n\n\\begin{small}\n\\emph{This text is small and emphasized.}\n\\end{small}\n\n\\end{document}\n*end_leaf* 1-6\n*end_constant* 1 6\n"
+    var tempText = versionNumber + " gui version number\n*constant* 1 6\n*leaf* 1-1\n\\documentclass[letterpaper,12pt,oneside]{article}\n\\title{\n\n*end_leaf* 1-1\n*random* 1-2 2\n*leaf* 1-2-1\nJim\n*end_leaf* 1-2-1\n*leaf* 1-2-2\nBill\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\n}\n\\date{July 2012}\n\\begin{document}\n\\maketitle\n\n*end_leaf* 1-3\n*leaf* 1-4\n\\section{Job History}\nHere the job history is in an enumerated list.\n%comments can be added after a percent sign, TeX will not add them to the final document.\n\\begin{enumerate}\n*end_leaf* 1-4\n*random* 1-5 2\n*leaf* 1-5-1\n\\item Birdwatching\n\n*end_leaf* 1-5-1\n*leaf* 1-5-2\n\\item Counting sheep\n\n*end_leaf* 1-5-2\n*end_random* 1-5 2\n*leaf* 1-6\n\\end{enumerate}\n\n\n\\begin{small}\n\\emph{This text is small and emphasized.}\n\\end{small}\n\n\\end{document}\n*end_leaf* 1-6\n*end_constant* 1 6\n"
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 
 function loadExample15() {
-    var tempText = "23 gui version number\n*constant* 1 3\n*random* 1-1 2\n*leaf* 1-1-1\nRoger %store%first_name%rog-%\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nMark %store%first_name%Mk.%\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*random* 1-2 2\n*leaf* 1-2-1\nWalker\n%store%last_name%walkabout%\n*end_leaf* 1-2-1\n*leaf* 1-2-2\nTannenbaum\n%store%last_name%tree%\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\nRandomized addresses go here.\n\n%recall%first_name%%recall%last_name%@hotmail.com\n\n*end_leaf* 1-3\n*end_constant* 1 3\n"
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*random* 1-1 2\n*leaf* 1-1-1\nRoger %store%first_name%rog-%\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nMark %store%first_name%Mk.%\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*random* 1-2 2\n*leaf* 1-2-1\nWalker\n%store%last_name%walkabout%\n*end_leaf* 1-2-1\n*leaf* 1-2-2\nTannenbaum\n%store%last_name%tree%\n*end_leaf* 1-2-2\n*end_random* 1-2 2\n*leaf* 1-3\nRandomized addresses go here.\n\n%recall%first_name%%recall%last_name%@hotmail.com\n\n*end_leaf* 1-3\n*end_constant* 1 3\n"
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
 
 function loadExample16() {
-    var tempText = "23 gui version number\n*random* 1 3 *nonUniformFirstSubPoint* 67 *repeat* 0 100 1\n*leaf* 1-1\na\n*end_leaf* 1-1\n*leaf* 1-2\nb\n*end_leaf* 1-2\n*leaf* 1-3\nc\n*end_leaf* 1-3\n*end_random* 1 3\n"
+    var tempText = versionNumber + " gui version number\n*random* 1 3 *nonUniformFirstSubPoint* 67 *repeat* 0 100 1\n*leaf* 1-1\na\n*end_leaf* 1-1\n*leaf* 1-2\nb\n*end_leaf* 1-2\n*leaf* 1-3\nc\n*end_leaf* 1-3\n*end_random* 1 3\n"
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
