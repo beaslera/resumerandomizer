@@ -1,0 +1,10 @@
+cyrillic_1.doc is the text file that these choices created
+cyrillic.rtf is the template file being used
+1 is the index of this text file within a matched set
+_2016-08-07-14-24-50 is the current time as year, month, day, hour (out of 24), minute, second
+24 is the version of the Python program
+24 gui version number
+1 is the number of text files being Matched.
+Read the following lines in pairs.  The first line is the start tag (from the template file) that required a choice.  The start tag line contains the type of section that required a decision (currently only 'Random' sections require decisions), then the label of this section as shown in the outline in the web-based meta-program, then the number of subsections to choose from, and then any settings for this section (e.g., repeating or matched files).  The second line is the index of the subsection that was randomly chosen.  The indices run from 0 through n-1, inclusive, where n is the number of choices listed in the start tag line.  All of the choices are also stored in the .txt file, and in the .csv file with variable names based on the section IDs.
+*random* 1 2
+1
