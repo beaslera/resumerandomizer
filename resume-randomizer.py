@@ -33,7 +33,7 @@
 # Version 10 6/27/2012: Adds file fragments.
 # Version 9 6/20/2012: Throws an error if a special text references a section other than Random, or if special text is used outside of a repeating section, or if the start/end/interval inputs are neither integers nor floats.
 # Version 8 5/25/2012: Adds Dependent sections.
-# Version 7 6/22/2007: The template files now end in ".rtf" because FileGether.exe created files ending in ".dat".
+# Version 7 6/22/2007: The template files now end in ".rtf" because FileGather.exe created files ending in ".dat".
 # Version 6 6/22/2007: The ".txt" files are now ".doc" files.  The ".raw" files are now ".txt" files.  This change is being done so that we can continue to use the FileGather.exe program to combine the records for many resumes into a single file.  As a side benefit, the resume files will now open in Word.
 # Version 5 6/22/2007: The program now creates ".raw" files also, containing just the filename for the text file and the choices made when creating the file.
 # Version 4 6/22/2007: No changes except for the version number (to keep the same as the version of the web-based template generator).
