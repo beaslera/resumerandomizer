@@ -8,7 +8,7 @@
   @licstart  The following is the entire license notice for the 
   JavaScript code in this page.
   
-  Copyright 2015  Ryan Beasley and Joanna Lahey
+  Copyright 2015-2017  Ryan Beasley and Joanna Lahey
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@
 //If you can read this on your web browser, javascript is not working.  Fix javascript on your web browser.
 
 // This javascript program is used with the Resume Randomizer program.  This program (consisting of three pages) provides a graphical user interface that assists users in generating templates.  Those templates are then used by the executable file to generate random text (containing the characteristics described in the template.
+// Version 25 8/11/2017: Adds support for specifying the maximum count of each sub-point of a Random section in a matched batch. Also, the min & max number of entries now uses parseInt(Number(...)) to catch bad input when a number precedes non-numeric characters, such as 3aoeu).
 // Version 24 11/8/2015: The csv and codebook files use underscores instead of dashes in the names of the points, to ease importing into Stata.
 // Version 23 11/1/2015: The csv and codebook files prepend "v" onto the names of the points, to ease importing into Excel and Stata.
 // Version 22 6/20/2015: Adds support for having a different percentage chance for the first sub-point of a Random section.  Switched from parseFloat() to Number() because the former will convert '1xaoeu32' to the number 1, while the latter returns NaN. Added more information to alerts when parsing percentage inputs to floats fails. Textareas are now automatically resized to fill the width of the frames.
@@ -55,7 +56,7 @@
 // Version 2 6/22/2007: Replaced all instances of the text "style" with "template".
 // Version 1 6/20/2007
 
-var versionNumber = 24;
+var versionNumber = 25;
 var templateMad = new Array();
 var guiHash = "#";
 clearTemplateNoReload();
@@ -112,6 +113,8 @@ function recursiveUpdate() {
 	var matchOnlyOneEver = false;
 	var minimumNumberOfEntries = 0;
 	var maximumNumberOfEntries = 0;
+	var matchMaxSelectionsPerSubPoint = false;
+	var maxSelectionsPerSubPointInteger = 0;
 	var nonUniformFirstSubPoint = false;
 
 	if (myValue == "*random*") {
@@ -203,11 +206,29 @@ function recursiveUpdate() {
 		} else {
 		    matchSame = tempIdMatchSame.checked;
 		}
-		if (matchOnlyOneEver) {
-		    matchSame = false;
+
+		var tempIdMatchMaxSelectionsPerSubPoint = gui.document.getElementById("matchMaxSelectionsPerSubPoint"+writeId());
+		if (tempIdMatchMaxSelectionsPerSubPoint != null) matchMaxSelectionsPerSubPoint = tempIdMatchMaxSelectionsPerSubPoint.checked;
+		if (matchMaxSelectionsPerSubPoint) {
+		    var tempIdMaxSelectionsPerSubPointInteger = gui.document.getElementById("maxSelectionsPerSubPointInteger"+writeId());
+		    if (tempIdMaxSelectionsPerSubPointInteger != null) {
+			maxSelectionsPerSubPointInteger = parseInt(Number(tempIdMaxSelectionsPerSubPointInteger.value));
+			if (isNaN(maxSelectionsPerSubPointInteger) || (maxSelectionsPerSubPointInteger < 0)) {
+			    alert("MatchMaxSelectionsPerSubPoint must be an integer greater than or equal to zero, for Random section " + writeId());
+			    maxSelectionsPerSubPointInteger = 0;
+			}
+		    }
+		}
+
+		if ((matchSame && matchDifferent) || (matchSame && matchOnlyOneEver) || (matchSame && matchMaxSelectionsPerSubPoint) || (matchDifferent && matchOnlyOneEver) || (matchDifferent && matchMaxSelectionsPerSubPoint) || (matchDifferent && matchMaxSelectionsPerSubPoint)) {
+		    alert("Cannot have more than one match requirement (e.g., MatchSame, MatchDifferent) for Random section " + writeId());
+		    matchSame = true
 		    matchDifferent = false;
-		} else {
-		    matchSame = !matchDifferent;
+		    matchOnlyOneEver = false;
+		    matchMaxSelectionsPerSubPoint = false;
+		}
+		if (!matchSame && !matchDifferent && !matchOnlyOneEver && !matchMaxSelectionsPerSubPoint) {
+		    matchSame = true
 		}
 	    }
 
@@ -242,7 +263,7 @@ function recursiveUpdate() {
 		if (repeatNoDoubles) {
 		    var tempIdMinimumNumberOfEntries = gui.document.getElementById("minimumNumberOfEntries"+writeId());
 		    if (tempIdMinimumNumberOfEntries != null) {
-			minimumNumberOfEntries = parseInt(tempIdMinimumNumberOfEntries.value);
+			minimumNumberOfEntries = parseInt(Number(tempIdMinimumNumberOfEntries.value));
 			if (isNaN(minimumNumberOfEntries)) {
 			    minimumNumberOfEntries = 0;
 			    alert("minimumNumberOfEntries"+writeId()+" is not a number!");
@@ -250,7 +271,7 @@ function recursiveUpdate() {
 		    }
 		    var tempIdMaximumNumberOfEntries = gui.document.getElementById("maximumNumberOfEntries"+writeId());
 		    if (tempIdMaximumNumberOfEntries != null) {
-			maximumNumberOfEntries = parseInt(tempIdMaximumNumberOfEntries.value);
+			maximumNumberOfEntries = parseInt(Number(tempIdMaximumNumberOfEntries.value));
 			if (isNaN(maximumNumberOfEntries)) {
 			    maximumNumberOfEntries = 0;
 			    alert("maximumNumberOfEntries"+writeId()+" is not a number!");
@@ -312,6 +333,7 @@ function recursiveUpdate() {
 	}
 	templateMad[templateMad.length-1] = myValue + " " + writeId() + " " + numChoices;
 	if (hidden) templateMad[templateMad.length-1] += " *hide*";
+	if (matchMaxSelectionsPerSubPoint) templateMad[templateMad.length-1] += " *matchMaxSelectionsPerSubPoint* " + maxSelectionsPerSubPointInteger;
 	if (nonUniformFirstSubPoint) templateMad[templateMad.length-1] += " *nonUniformFirstSubPoint* " + nonUniformFirstSubPointPercentage;
 	if (repeatSame) templateMad[templateMad.length-1] += " *repeatSame*";
 	if (repeatNever) templateMad[templateMad.length-1] += " *repeatNever*";
@@ -746,6 +768,13 @@ function loadExample16() {
     templateFrame.document.getElementById("templateText").value = tempText;
     loadTemplate();
 }
+
+function loadExample17() {
+    var tempText = versionNumber + " gui version number\n*constant* 1 3\n*random* 1-1 2 *matchMaxSelectionsPerSubPoint* 2\n*leaf* 1-1-1\nSchool A\n*end_leaf* 1-1-1\n*leaf* 1-1-2\nSchool B\n*end_leaf* 1-1-2\n*end_random* 1-1 2\n*leaf* 1-2\n\n\n*end_leaf* 1-2\n*random* 1-3 4 *matchDifferent*\n*leaf* 1-3-1\nName 1\n*end_leaf* 1-3-1\n*leaf* 1-3-2\nName 2\n*end_leaf* 1-3-2\n*leaf* 1-3-3\nName 3\n*end_leaf* 1-3-3\n*leaf* 1-3-4\nName 4\n*end_leaf* 1-3-4\n*end_random* 1-3 4\n*end_constant* 1 3\n"
+    templateFrame.document.getElementById("templateText").value = tempText;
+    loadTemplate();
+}
+
     
 
 

@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+# Version 25 8/11/2017: Can now specify the maximum number of times that a sub-point of a Random section will be selected across an entire batch (counting each iteration separately).  Adds NaN checking to the minimum & maximum number of entries.
 # Version 24 11/8/2015: When outputting the csv, the column headers for the points use underscores to separate numbers instead of dashes, e.g., "v1_3". This change is to help with importing the data into Stata, which cannot have variable names containing dashes.  Ditto for the parents in the codebook, so that they match the csv files.
 # Version 23 11/1/2015: When outputting the csv, the column headers for the points have their values prepended by "v", e.g., "v1-3". This change is to help with importing the data into Stata, which cannot have variable names that start with numbers.  Ditto for the parents in the codebook, so that Excel formats that column as string.  Also, the csv files no longer have spaces after each comma.  Licensed under Apache License 2.0.
 # Version 22 6/20/2015: If attempting to print out the codebook fails because the program does not find an expected start tag, it prints a section of the template (including fragments) with line numbers, to aid in debugging. Refactored the generation of the codebook into a function.  Can now specify the percentage chance for the first sub-point in a random section...the remaining sub-points are uniform probability.
@@ -46,8 +47,8 @@
 #Putting a space before the *leaf* special text in a fragment should not cause the program to fail.
 #I should just put repeatNever here like matchDifferent...simplify the below if-elif block of getChoiceFor...
 
-Version = 24
-Date = "November 8, 2015"
+Version = 25
+Date = "August 11, 2017"
 
 import os
 import glob
@@ -434,7 +435,7 @@ def createResumes(fileName):
     return -53
 
   for line in inFile:
-    if ('*matchDifferent*' in line) or ('*matchSame*' in line) or ('*matchOnlyOneEver*' in line):
+    if ('*matchDifferent*' in line) or ('*matchSame*' in line) or ('*matchOnlyOneEver*' in line) or ('*matchMaxSelectionsPerSubPoint*' in line):
       matchedPair = True
       break
   numDifferent = 1
@@ -510,6 +511,7 @@ def createResumes(fileName):
     dictionaryMatchSame = {}
     dictionaryMatchDifferent = {}
     dictionaryMatchOnlyOneEver = {}
+    dictionaryMaxSelectionsPerSubPoint = {}
     globalThisResumeNumber = 0;
     for [outputFilename, saveChoicesFilename, txtChoicesFilename, csvChoicesFilename] in map(lambda x,y: [x, y[0], y[1], y[2]], outputFiles, map(None, saveChoicesFiles, txtChoicesFiles, csvChoicesFiles)):
       globalThisResumeNumber += 1;
@@ -543,7 +545,7 @@ def createResumes(fileName):
       globalDictRangeChoices = {}
       inFile.seek(0)
       inFile.readline() #skip gui version
-      retval = recursiveGenerate(inFile, outputFile, saveChoicesFile, txtChoicesFile, '', {}, {}, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, '', '', '', '', {})
+      retval = recursiveGenerate(inFile, outputFile, saveChoicesFile, txtChoicesFile, '', {}, {}, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, '', '', '', '', {})
       if (retval >= 0) and (len(globalDelayedWrite) > 0):
         print "Error! A Leaf contains special text that refers to the 'next' value of a repeating section, but the section to which it refers is not repeating:\n" + globalDelayedWrite[0];
         retval = -40
@@ -590,7 +592,7 @@ def skipElement(inFile, currentLine):
     next_line = next_line.rstrip('\n')+' '
   return 1
 
-def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
   theLine = inFile.readline()
   if not theLine: #readline returns an empty string when it reaches EOF
     print "\nError!  The recursiveGenerate function was looking for a new section when it reached the end of the file unexpectedly.  It expected to find a start tag (e.g., *random* 1-3-1 7).  Make sure the lines (in the template file) that contain start tags for Random and Constant and Dependent sections specify the correct number of subsections listed after the label (following the second space in the line).  Why did the function not find an end tag as the last line in the file?"
@@ -624,13 +626,13 @@ def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariab
     return writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, currentString, currentPlusIntervalString, makeCodeBook)
 
   if "*random*" in myText:
-    return writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
+    return writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
 
   if "*dependent*" in myText:
-    return writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
+    return writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
 
   if "*constant*" in myText:
-    return writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
+    return writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
 
   print "\nError!  The recursiveGenerate function found a start tag that it does not recognize: "+currentLine
   print "The recognizable start tags are *leaf*, *random*, *dependent*, and *constant*.  If the line above is not supposed to be a start tag, make sure in the template file it is not directly after a start tag for a Random or Constant or Dependent section, and that it does not directly follow an end tag."
@@ -699,9 +701,9 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
   return lineNumber
 
 
-def writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+def writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
   for i in range(myNumChoices):
-    retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + '-' + str(i+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
+    retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + '-' + str(i+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
     if (retval < 0): return retval
   theLine = inFile.readline()
   if not theLine: #readline returns an empty string when it reaches EOF
@@ -715,13 +717,15 @@ def writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoic
   return 1
 
 
-def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
   repeat = False
   repeatSame = False
   repeatNever = False
   repeatNoDoubles = False
   repeatDifferentDouble = False
   repeatDifferentDoublePercentage = 0
+  matchMaxSelectionsPerSubPoint = False
+  maxSelectionsPerSubPointInteger = 0
   nonUniformFirstSubPoint = False
   nonUniformFirstSubPointPercentage = 0
   matchSame = False
@@ -766,19 +770,43 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
     elif (temp[countSplit] == "*repeatDifferentDouble*") and (len(temp) > countSplit+1):
       repeatDifferentDouble = True
       repeatDifferentDoublePercentage = float(temp[countSplit+1])
+    elif (temp[countSplit] == "*matchMaxSelectionsPerSubPoint*") and (len(temp) > countSplit+1):
+      matchMaxSelectionsPerSubPoint = True
+      try:
+        maxSelectionsPerSubPointInteger = int(temp[countSplit+1])
+      except ValueError:
+        print "\nError! This Random start tag: " + currentLine
+        print "specifies Match Max Selections Per Sub Point to be something other than a number.  Fix the template file by removing the tag or following it with an integer greater than zero."
+        return -56
+      if (maxSelectionsPerSubPointInteger <= 0):
+        print "\nError! This Random start tag: " + currentLine
+        print "specifies Match Max Selections Per Sub Point to be a number less than or equal to zero, which is invalid.  Fix the template file by removing the tag or using an integer greater than zero."
+        return -57
     elif (temp[countSplit] == "*nonUniformFirstSubPoint*"):
       nonUniformFirstSubPoint = True
-      nonUniformFirstSubPointPercentage = float(temp[countSplit+1])
+      try:
+        nonUniformFirstSubPointPercentage = float(temp[countSplit+1])
+      except ValueError:
+        print "\nError! This Random start tag: " + currentLine
+        print "specifies the non-uniform first sub-point percentage to be something other than a number.  Fix the template file by removing the tag or following it with a decimal number."
+        return -58
     elif (temp[countSplit] == "*minimumNumberOfEntries*") and (len(temp) > countSplit+1):
-      minimumNumberOfEntries = int(temp[countSplit+1])
+      try:
+        minimumNumberOfEntries = int(temp[countSplit+1])
+      except ValueError:
+        print "\nError! This Random start tag: " + currentLine
+        print "specifies the minimum number of entries to be something other than a number.  Fix the template file by removing the tag or following it with an integer."
+        return -59
     elif (temp[countSplit] == "*maximumNumberOfEntries*") and (len(temp) > countSplit+1):
-      maximumNumberOfEntries = int(temp[countSplit+1])
+      try:
+        maximumNumberOfEntries = int(temp[countSplit+1])
+      except ValueError:
+        print "\nError! This Random start tag: " + currentLine
+        print "specifies the maximum number of entries to be something other than a number.  Fix the template file by removing the tag or following it with an integer."
+        return -60
     elif temp[countSplit] == "*matchSame*": matchSame = True
     elif temp[countSplit] == "*matchDifferent*": matchDifferent = True
     elif temp[countSplit] == "*matchOnlyOneEver*": matchOnlyOneEver = True
-  if matchOnlyOneEver and matchDifferent:
-    print "\nWarning! This Random start tag: " + currentLine
-    print "specifies both Match Only One Ever and Match Different.  Ignoring Match Different."
   if matchOnlyOneEver and matchSame:
     print "\nError! This Random start tag: " + currentLine
     print "specifies both Match Only One Ever and Match Same, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints."
@@ -787,6 +815,22 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
     print "\nError! This Random start tag: " + currentLine
     print "specifies both Match Different and Match Same, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints."
     return -20
+  if matchMaxSelectionsPerSubPoint and matchSame:
+    print "\nError! This Random start tag: " + currentLine
+    print "specifies both Match Max Selections Per Sub-Point and Match Same, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints."
+    return -54
+  if matchMaxSelectionsPerSubPoint and matchDifferent:
+    print "\nError! This Random start tag: " + currentLine
+    print "specifies both Match Max Selections Per Sub-Point and Match Different, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints."
+    return -55
+  if matchMaxSelectionsPerSubPoint and matchOnlyOneEver:
+    print "\nError! This Random start tag: " + currentLine
+    print "specifies both Match Max Selections Per Sub-Point and Match Only One Ever.  Ignoring Match Max Selections Per Sub-Point because it is redundant."
+    matchMaxSelectionsPerSubPoint = False
+  if matchOnlyOneEver and matchDifferent:
+    print "\nWarning! This Random start tag: " + currentLine
+    print "specifies both Match Only One Ever and Match Different.  Ignoring Match Different because it is redundant."
+    matchDifferent = False
   if repeatSame and repeatNever:
     print "\nError! This Random start tag: " + currentLine
     print "specifies both Repeat Same and Repeat Never, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints."
@@ -821,13 +865,13 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
       endString = str(repeatEnd)
       currentString = str(myIteration)
       currentPlusIntervalString = str(myIteration+repeatInterval)
-      retval = enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchSame, matchDifferent, matchOnlyOneEver, myVariableName+'-iter'+str(myIteration), myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
+      retval = enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName+'-iter'+str(myIteration), myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
       if retval < 0: return retval
     if len(globalDelayedWrite)>0: replaceNextString(endString, outFile, myLabel)
-  else: retval = enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
+  else: retval = enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
   return retval
 
-def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
   # find previous choice in dictionaryLastChoice
   for countSplit in range(3, len(temp)-1):
     if (temp[countSplit] == "*master*"):
@@ -852,7 +896,7 @@ def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, save
   for i in range(chosenSubelement):
     retval = skipElement(inFile, currentLine)
     if (retval < 0): return retval
-  retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + "-" + str(chosenSubelement+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
+  retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + "-" + str(chosenSubelement+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
   if (retval < 0): return retval
   next_line = ''
   while (not "*end_dependent* "+myLabel+" " in next_line):
@@ -957,7 +1001,7 @@ def getChoiceForMatchSame(repeatSame, myLabel, myVariableName, dictionaryMatchSa
     chosenSubelement = dictionaryMatchSame[myVariableName]
     return chosenSubelement
   
-def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
+def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
   if matchDifferent and myVariableName in dictionaryMatchDifferent:
     [alreadyTaken, freeToChoose] = intersection(dictionaryMatchDifferent[myVariableName], range(myNumChoices))
     if len(freeToChoose) < 1:
@@ -966,6 +1010,14 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
       print "\nThis random section or one of its parents repeats.  This section is not supposed to have the same result as any of the text files it is matched with for the same iteration in the repetition.  The program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections)."
       return [-19, -1]
   else: freeToChoose = range(myNumChoices)
+
+  if matchMaxSelectionsPerSubPoint and (myLabel in dictionaryMaxSelectionsPerSubPoint):
+    [reachedMax, freeToChoose] = intersection([i for i, j in enumerate(dictionaryMaxSelectionsPerSubPoint[myLabel]) if j >= maxSelectionsPerSubPointInteger], freeToChoose)
+    if len(freeToChoose) < 1:
+      print "\nError! Disobeying Max Selections Per Sub-Point.  Not enough choices."
+      print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
+      print "\nThis random section is not supposed to select the same sub-point more than " + str(maxSelectionsPerSubPointInteger) + " times throughout an entire batch. The Program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections)."
+      return [-39, -1]
 
   #I should just put repeatNever here like matchDifferent...simplify the below if-elif block of getChoiceFor...
 
@@ -1028,12 +1080,16 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
   if (myLabel in globalDictRangeChoices):
     globalDictRangeChoices[myLabel][1] += 1
     if not sameChoiceAsLastTime: globalDictRangeChoices[myLabel][2] += 1;
+  if matchMaxSelectionsPerSubPoint:
+    if myLabel not in dictionaryMaxSelectionsPerSubPoint:
+      dictionaryMaxSelectionsPerSubPoint[myLabel] = [0] * myNumChoices
+    dictionaryMaxSelectionsPerSubPoint[myLabel][chosenSubelement] += 1
   return [chosenSubelement, sameChoiceAsLastTime]
 
 
 
-def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
-  [chosenSubelement, sameChoiceAsLastTime] = getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
+def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
+  [chosenSubelement, sameChoiceAsLastTime] = getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
   if chosenSubelement < 0: return chosenSubelement
   if len(globalDelayedWrite)>0 and not sameChoiceAsLastTime: replaceNextString(currentString, outFile, myLabel)
   saveChoicesFile.write(currentLine)
@@ -1046,7 +1102,7 @@ def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferent
     retval = skipElement(inFile, currentLine)
     if (retval < 0): return retval
   if not repeatNoDoubles or not sameChoiceAsLastTime:
-    retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + "-" + str(chosenSubelement+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
+    retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + "-" + str(chosenSubelement+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
     if (retval < 0): return retval
   next_line = ''
   while (not "*end_random* "+myLabel+" " in next_line):

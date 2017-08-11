@@ -40,7 +40,7 @@ textarea {width: 100%;}
   @licstart  The following is the entire license notice for the 
   JavaScript code in this page.
   
-  Copyright 2015  Ryan Beasley and Joanna Lahey
+  Copyright 2015-2017  Ryan Beasley and Joanna Lahey
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -116,7 +116,6 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	    document.write(templateCopy[lineNumber]);
 	    if (hideMe) copyOfText += templateCopy[lineNumber];
 	    lineNumber++;
-	    //alert(lineNumber);
 	    if (lineNumber >= templateCopy.length) {
 		document.write("</TEXTAREA></hidden><p style='background-color:yellow;'>Error! The template text (in the right frame) is malformed.<br>Could not find *end_leaf* " + myLabel + "<br>Review the template text in the right-hand frame and make sure that the lines that start with *constant*, *random*, and *dependent* all have the correct number (following the section label) for the number of their subsections.  For example, a line that says '*constant* 2-4-1 5' must have 5 subsections.</p>");
 		return -3;
@@ -163,6 +162,7 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	    var matchOnlyOneEver = false;
 	    var minimumNumberOfEntries = 0;
 	    var maximumNumberOfEntries = 0;
+	    var matchMaxSelectionsPerSubPoint = false;
 	    var nonUniformFirstSubPoint = false;
 	    for (countSplit = 3; countSplit < tempSplit.length; countSplit++) {
 		if ((tempSplit[countSplit] == "*repeat*") && (tempSplit.length > countSplit+3)) {
@@ -187,10 +187,21 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 		else if (tempSplit[countSplit] == "*matchSame*") matchSame = true;
 		else if (tempSplit[countSplit] == "*matchDifferent*") matchDifferent = true;
 		else if (tempSplit[countSplit] == "*matchOnlyOneEver*") matchOnlyOneEver = true;
+		else if ((tempSplit[countSplit] == "*matchMaxSelectionsPerSubPoint*") && (tempSplit.length > countSplit +1)) {
+		    matchMaxSelectionsPerSubPoint = true;
+		    var maxSelectionsPerSubPointInteger = tempSplit[countSplit+1]
+		}
 		else if ((tempSplit[countSplit] == "*nonUniformFirstSubPoint*") && (tempSplit.length > countSplit +1)) {
 		    nonUniformFirstSubPoint = true;
 		    var nonUniformFirstSubPointPercentage = tempSplit[countSplit+1]
 		}
+	    }
+	    if ((matchSame && matchDifferent) || (matchSame && matchOnlyOneEver) || (matchSame && matchMaxSelectionsPerSubPoint) || (matchDifferent && matchOnlyOneEver) || (matchDifferent && matchMaxSelectionsPerSubPoint) || (matchDifferent && matchMaxSelectionsPerSubPoint)) {
+		alert("Cannot have more than one match requirement (e.g., MatchSame, MatchDifferent) for Random section " + myLabel);
+		matchSame = true
+		matchDifferent = false;
+		matchOnlyOneEver = false;
+		matchMaxSelectionsPerSubPoint = false;
 	    }
 	}
 
@@ -256,7 +267,7 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	    document.write('</input>')
 	    if (nonUniformFirstSubPoint) document.write('...Percent (0 to 100):<input id="nonUniformFirstSubPointPercentage' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');" size="2" value="'+nonUniformFirstSubPointPercentage+'"></input>%');
 
-	    if (matchSame || matchDifferent || matchOnlyOneEver) {
+	    if (matchSame || matchDifferent || matchOnlyOneEver || matchMaxSelectionsPerSubPoint) {
 		document.write(' <input id="matched' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');" checked>Matched:</input>')
 		document.write('<input id="matchDifferent' + myLabel + '" name="match' + myLabel + '" type="radio" onClick="parent.regenerate(\'' +myLabel+ '\');"')
 		if (matchDifferent) document.write(' checked')
@@ -264,9 +275,15 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 		if (matchSame) document.write(' checked')
 		document.write('>MatchSame</input>, <input id="matchOnlyOneEver' + myLabel + '" name="match' + myLabel + '" type="radio" onClick="parent.regenerate(\'' +myLabel+ '\');"')
 		if (matchOnlyOneEver) document.write(' checked')
-		document.write('>MatchOnlyOneEver</input>')
+		document.write('>MatchOnlyOneEver</input>, <input id="matchMaxSelectionsPerSubPoint' + myLabel + '" name="match' + myLabel + '" type="radio" onClick="parent.regenerate(\'' +myLabel+ '\');"')
+		if (matchMaxSelectionsPerSubPoint) document.write(' checked')
+		document.write('>MatchMaxSelectionsPerSubPoint')
+		if (matchMaxSelectionsPerSubPoint) document.write(':')
+		document.write('</input>')
+		if (matchMaxSelectionsPerSubPoint) document.write('<input id="maxSelectionsPerSubPointInteger' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');" size="2" value="'+maxSelectionsPerSubPointInteger+'"></input>');
 	    }
 	    else document.write(' <input id="matched' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');">Matched</input>')
+
 	    document.write('<br><input id="repeat' + myLabel + '" type="checkbox" onClick="parent.regenerate(\'' +myLabel+ '\');"')
 	    if (repeat) document.write(' checked')
 	    document.write('>Repeat</input>')
@@ -351,7 +368,7 @@ if (typeof parent.templateMad === "undefined") {
 }
 </SCRIPT>
 
-<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 24</span></h1>
+<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 25</span></h1>
 <p>This webpage generates templates for the Resume Randomizer program.
 <br>Firefox (version 23.0.1) is the recommended browser.  Internet Explorer (version 10.0) also works except for the "hide" checkboxes.  Chrome (version 29.0) is known not to work (due to the way Chrome handles inter-frame communication when in local mode).  You may be required to enable "active content" or "allow blocked content".
 <p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>.
@@ -448,6 +465,8 @@ Similar to Example 12, by having the template generates valid TeX files the resu
 In this example, the email address in Leaf 1-3 is based on the random selection of the first name (Random section 1-1), and the random selection of the last name (Random section 1-2).  It would be possible to "nest" the random section(s) for the last name inside the random section for the first name, but that would require duplicating the random selection of the last name in two places.  Instead, each leaf that contains a first name stores a template-created variable "first_name", and each leaf that contains a last name stores a variable "last_name".  Then, the email is created by recalling those two variables and adding the name of the email service provider.
 <h4>Example 16, first sub-point percentage</h4><input type="button" value="Load Example 16" onClick="parent.loadExample16()">
 In this example, the first subpoint of a random section is selected with a specific probability.  If you create a resume you will see that 2/3rds of the letters are "a", and the remaining sub-points ("b" and "c") are chosen with uniform probability. By nesting random sections, each with a "first sub-point percentage", it is possible to exactly specify probabilities for each possible leaf.
+<h4>Example 17, matched max selections per sub-point</h4><input type="button" value="Load Example 17" onClick="parent.loadExample17()">
+In this example, the schools in the sub-points of the first random section will not be selected more than twice each, while the names in the sub-points of the second random section will each only be selected once. If you create a batch of 4 resume you will see that exactly half of the resumes have "School A" while the other half have "School B".  If you create a batch of 3 resumes, two of them will have the same school, and the third resume will have the other school.  If you attempt to create a batch of more than 4 resumes, the Resume Randomizer program will fail with an error because the first Random section only has two sub-points, and each can only be selected up to twice, for a maximum of 4 selections.
 <hr>
 
 <h2><a name="advanced">Advanced Use</a></h2>
@@ -458,7 +477,9 @@ In this example, the first subpoint of a random section is selected with a speci
 <ul><li>Generating HTML (and therefore webpages) significantly increases the capabilities of the resulting "resumes", allowing for tables, lists, images, hyperlinks, ads, etc.  It is even possible to put javascript code into the template, which will be run when the resumes are opened by a web browser (or when the user click a button or moves the mouse over a certain area), so it is possible to use this program to put programs into your HTML "resumes".</ul>
 <li>Fourth, templates can be created that generate TeX (see Example 14 above).
 </ol>
+
 <h3>"Hide" setting:</h3>In order to reduce clutter, outline points marked "Hide" do not display any of the controls (i.e., buttons, drop-down boxes, text entry areas) for themselves or their subpoints.  Instead, 'Random' and 'Dependent' points are displayed with a black border inside of which their subpoints are displayed, each surrounded by a grey border. 'Constant' and 'Leaf' points do not create borders.  This setting has no effect on generation of resume files and does not work in Internet Explorer.
+
 <h3>Non-equal likelihood:</h3>When choosing between two (or more) options for characteristics (e.g., "Linda" vs. "Mary"), the experimenter may not want each option to be chosen an equal amount of the time.  Four methods exist for choosing characteristics so that they appear with non-uniform probability.
 <ol>
   <li>Nest random sections (Example 4 above).
@@ -466,9 +487,21 @@ In this example, the first subpoint of a random section is selected with a speci
   <li>Use the setting called "First sub-point percentage" (Example 16 above). That setting specifies the percentage that the first sub-point in the Random section will be chosen, and is only considered after all other settings are addressed (i.e., it does not supersede or conflict with any other setting such as "Non-uniform chance for immediate repeat"). If the first sub-point is not chosen (either randomly, or due to another setting like "Always different when repeat") then the remaining sub-points each have a uniform probability of being chosen. If a file fragment (see below) is loaded as the Random section's first sub-point, the first leaf in the fragment will be the one to which the specific probability is applied. To get a specific probability for each of several leaf texts, simply nest Random sections each with the "First sub-point percentage" setting.
   <li>Use the setting called "Non-uniform chance for immediate repeat" which is described below in the section marked "Repeating" and does not affect the chance that a characteristic will be initially chosen (Example 10 above).
 </ol>
-<h3>Matched "pairs":</h3>This option allows the experiment to create matched resumes based on experimenter-defined matches.  The maximum number of possible matches is set at 199 (2-4 is more common in the literature).  There are three ways resumes can be matched.  The first way is that any of the 'Random' points can be set to "Match Same", in which case the matched resume files will all choose the same characteristic (Examples 6&10 above) for the same iteration. The second way is that any of the 'Random' points can be set to "Match Different", in which case the resume files will be generated such that no two files will choose the identical characteristic (Examples 7&10 above) for the same iteration. Make sure that any point marked "Match Different" contain at least one characteristic per matched resume.  The third way is that any of the 'Random' points can be set to "Match Only One Ever", in which case only one resume file can ever contain each of the sub-sections.  The difference between "Match Different" and "Match Only One Ever" is that if there is a repeating random section (see below) with only two sub-sections and you generate a matched pair of resumes, then for "Match Only One Ever" only one resume will ever have the first sub-section (and the other resume will have the other sub-section), while with "Match Different" they can alternate so that in each iteration of the repetition the first resume could get either of the sub-sections (with its matched pair being forced to take the other sub-section).
+
+<h3>Matched "pairs":</h3>This option allows the experiment to create matched resumes based on experimenter-defined matches.  There are four ways resumes can be matched.  These options are exclusive to each other.
+<ol>
+  <li>The first way is that any of the 'Random' points can be set to "Match Same", in which case the matched resume files will all choose the same characteristic (Examples 6&10 above) for the same iteration.
+  <li>The second way is that any of the 'Random' points can be set to "Match Different", in which case the resume files will be generated such that no two files will choose the identical characteristic (Examples 7&10 above) for the same iteration. Make sure that any point marked "Match Different" contain at least one characteristic per matched resume.
+  <li>The third way is that any of the 'Random' points can be set to "Match Only One Ever", in which case only one resume file can ever contain each of the sub-sections.  The difference between "Match Different" and "Match Only One Ever" is that if there is a repeating random section (see below) with only two sub-sections and you generate a matched pair of resumes, then for "Match Only One Ever" only one resume will ever have the first sub-section (and the other resume will have the other sub-section), while with "Match Different" they can alternate so that in each iteration of the repetition the first resume could get either of the sub-sections (with its matched pair being forced to take the other sub-section).
+  <li>The fourth way is that any of the 'Random' points can be set to "Match Max Selections Per Sub Point", which allows the specification of the maximum number of times that each sub-point/characteristic in a Random section will be chosen in a batch. The Resume Randomizer program will count the number of times each sub-point is selected within a batch (counting each iteration separately), and will stop selecting a sub-point once that sub-point's count reaches the maximum. One use-case is to generate X number of resumes from a template with a Random section with two sub-points, where exactly X/2 resumes must use the first sub-point and the others must use the second sub-point.   See Example 17.
+  <ul>
+    <li>This functionality can be somewhat duplicated by generating X/2 resumes each from two completely separate templates, but because those would be separate batches there would not be any matching enforced between the two sets, e.g., "selection without replacement", MatchOnlyOneEver.  Using this MatchMaxSelectionsPerSubPoint setting enables the user to limit the number of selections and keep the "selection without replacement" and other features that are limited to a single template.
+    <li>Since it is much harder to programmatically specify a *minimum* number of selections because of the way the program works, that control has not been implemented.  However, if you know the number of times a Random section will be entered on a given template (e.g., it is not nested within another Random section), then you may be able to set the number of sub-points, the "match maximum selections per sub-point", and then generate a specific number of resumes per batch such that each sub-point is selected some minimum number of times.
+  </ul>
+</ol>
+
 <h3>Repeating:</h3>This option is most useful for generating job histories where multiple jobs are picked from a single list.  If an outline point is set to "Repeat", then that point will be repeated some number of times (see Example 5 above).  When a resume is generated, a counter inside the program will be initialized to the 'start' value, and then incremented by the 'interval' value after each time the point is completed.  The repetitions will stop when the counter is equal to or past the 'end' value.
-    <p>When generating job histories, the user may desire for the same characteristic (i.e., previous jobs) not to be printed twice in succession.  Setting the option "Do not print doubles" will tell the program to not print the same characteristic upon successive repetitions until a different characteristic is chosen (see Examples 9&10).
+<p>When generating job histories, the user may desire for the same characteristic (i.e., previous jobs) not to be printed twice in succession.  Setting the option "Do not print doubles" will tell the program to not print the same characteristic upon successive repetitions until a different characteristic is chosen (see Examples 9&10).
 <p>There are five settings that affect the probability of choosing the same characteristic in multiple repetitions.  The "Same if Repeat" setting will choose the same characteristic on each repetition.  The "Always different when repeat" setting will prevent the resume from containing the same characteristic more than once.  ("Always different when repeat" is different from "Do not print doubles" because the former will print a different characteristic for each repetition, whereas the latter may only end up printing one characteristic.)  The third setting that affects probability is "Non-uniform chance for immediate repeat", which allows the experimenter to specify the exact chance of choosing the same subpoint that was chosen the last repetition.
 <br>If "do not print doubles" is checked, then two more options will be possible: "minimum # of entries" and "maximum # of entries".  If an integer greater than zero is provided for the minimum, then the random section will force the last selections to be different if necessary for there to be that number of entries.  If a number greater than zero is provided for the maximum, then the random section will force the last selections to be the same if necessary for there to be no more than that number of entries.  Values of 0 or less for those entries will be ignored.
 <br>These five settings are <em>mutually-exclusive</em> except for minimum & maximum number of entries.
@@ -480,15 +513,10 @@ In this example, the first subpoint of a random section is selected with a speci
 <p>When the resume-randomizer program generates resumes from a template, the program stores the last choice for each 'Random' section.  When the program comes to a 'Dependent' section, it makes the same choice that was last made by the depended-upon 'Random' section.  For example, dependent sections are useful if you are generating resumes and you want the phone number to be dependent on the name, the year of high school graduation, or some other random selection made while generating the resume.  For another example, if you are generating resumes for different jobs at random and certain education entries need to be paired with certain certificates.  See Example 11 above.
 
 <h3>File fragments:</h3> "File fragments" allow a template to load text from a separate file. For example, the example template "example_resume_template_with_fragments.rtf" provided with this software uses text contained in the "example_job_history_fragment.rtf" fragment to add text to the job history section of a resume. <em>The purpose of file fragments</em> is to simplify text entry of many leaf sections.  Without file fragments, the user must either enter the text for each leaf into this webpage, or learn all the text formatting required to write the template files manually.  Using file fragments, the complicated aspects of the template can be created using this webpage, while long lists of leaf sections can be collated into a plain text file using minimal formatting.
-
 <p>To load a fragment, use the special text "%file%XXXXX%" at the start of a line, substituting a filename for the "XXXXX"; see section 1-3-2 of Example 13 above.  The first line of the named file should start with "*fragment*", and the file should contain leaf sections that start with a line "*leaf*" and end with a line "*end_leaf*", similar to the template format but without any section labels.  Any lines outside of a *leaf*...*end_leaf* block will be ignored, so blank lines can be inserted to make it easier to read the fragment file.  When the resume-randomizer.exe program is run, it checks the template for any %file% special texts, and inserts the fragments there as though the template contained those leaf subsections.  In the example, the %file% special text is in section 1-3-2, a leaf of the random section 1-3, so after the fragment is inserted, random section 1-3 will have a total of 5 subsections (Target, Wal-Mart, Starbucks, Office temp, and the Random section for Best Buy).
-
 <p>File fragments can only contain "leaf" sections.
-
 <p>File fragments can contain any special texts. Except for %next%, all the special texts are used the same as outside of a file fragment (including %file%, so file fragments can reference other file fragments).  Since the file fragment does not contain any "random" sections, it does not make sense to specify the label with the %next% special text.  Therefore, in file fragments (and only in file fragments), "%next%" is not followed by a label (or a third '%'), and instead will automatically refer to the repeating "random" section that is nearest to the %file% special text.
-
 <p>Note, if you want a job history where each of the matched resumes gets an equivalent but different job title at each repetition, and you want to store those job titles in file fragments, here is one way: start with a random section, where each subsection is a Constant subsection containing a Leaf followed by a Random.  The Leaf would have the special text for the counter (aka date), e.g., "%next%1-3% - %current%".  Each Random section would be MatchDifferent, and would have a single Leaf subsection.  Those Leaf subsections would each reference a different file fragment (containing equivalent but different jobs)...note that you wouldn't want to put %current% or %next% in the file fragments, because the nearest Random would be the one with MatchDifferent.  So there might be a file fragment containing equivalent but different office jobs, then another fragment containing equivalent but different waitressing jobs, etc.
-
 <p>Further note, if a dependent section points at a random section with one or more leaf subsections that contain file fragments, the gui will give the dependent section the wrong number of subsections.  In this case, use file fragments containing the exact same number of Leaf sections in both the Dependent section and the master Random section.
 
 <h3>Template-created variables, %store% and %recall% special text:</h3>
@@ -497,6 +525,7 @@ Another way of having a Random section affect later text is through template-cre
 <hr>
 <h2><a name="changelog">Changelog</a></h2>
 <ul>
+<li>Version 25 on 8/11/2017: Random sections can now be matched to have a maximum number of times that each sub-point can be selected in a batch.
 <li>Version 24 on 11/8/2015: The csv files and codebook use underscores to separate the numbers in point labels.  For example, point 1-3-5-11 will be saved in the file as "v1_3_5_11".  This change is to help with importing the data into Stata (which drops dashes from variable names).
 <li>Version 23 on 11/1/2015: The csv files and codebook prepend points with "v".  For example, point 1-3-5-11 will be saved in the file as "v1-3-5-11".  This change is to help with importing the data into Excel (which otherwise tries to format the point identifiers as dates), and Stata (which will not import variable names that start with numbers).
 <li>Version 22 on 6/20/2015: Random sections can now have a non-uniform percentage change for the first sub-point. The executable provides more information if it runs into an error writing the codebook.
@@ -517,6 +546,6 @@ Another way of having a Random section affect later text is through template-cre
 </ul>
 <p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>.
 <hr>
-<small>Copyright 2015 Ryan Beasley and Joanna Lahey.</small>
+<small>Copyright 2015-2017 Ryan Beasley and Joanna Lahey.</small>
 </BODY>
 </HTML>
