@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-# Version 25 8/11/2017: Can now specify the maximum number of times that a sub-point of a Random section will be selected across an entire batch (counting each iteration separately).  Adds NaN checking to the minimum & maximum number of entries.
+# Version 25 8/11/2017: Can now specify the maximum number of times that a sub-point of a Random section will be selected across an entire batch (counting each iteration separately).  Adds NaN checking to the minimum & maximum number of entries.  Fixes crash bug when a line in the tepmlate only contained store commands.
 # Version 24 11/8/2015: When outputting the csv, the column headers for the points use underscores to separate numbers instead of dashes, e.g., "v1_3". This change is to help with importing the data into Stata, which cannot have variable names containing dashes.  Ditto for the parents in the codebook, so that they match the csv files.
 # Version 23 11/1/2015: When outputting the csv, the column headers for the points have their values prepended by "v", e.g., "v1-3". This change is to help with importing the data into Stata, which cannot have variable names that start with numbers.  Ditto for the parents in the codebook, so that Excel formats that column as string.  Also, the csv files no longer have spaces after each comma.  Licensed under Apache License 2.0.
 # Version 22 6/20/2015: If attempting to print out the codebook fails because the program does not find an expected start tag, it prints a section of the template (including fragments) with line numbers, to aid in debugging. Refactored the generation of the codebook into a function.  Can now specify the percentage chance for the first sub-point in a random section...the remaining sub-points are uniform probability.
@@ -667,7 +667,8 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
       if ('%store%' in tempString):
         tempString_strings = tempString.split('%')
         for temp_index in xrange(len(tempString_strings)-3, -1, -1):
-          if tempString_strings[temp_index] == 'store':
+          # must check length of the list because if the line only contains store commands they will all be stripped out, and the list will be empty on the last iteration (when temp_index is 0)
+          if ((len(tempString_strings) > temp_index) and (tempString_strings[temp_index] == 'store')):
             globalMemory[tempString_strings[temp_index+1]] = tempString_strings[temp_index+2]
             #if the store special text comes at the beginning or end of the line, it will leave an empty string when splitting, which will make a '%' when joining
             start_index = temp_index
