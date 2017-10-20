@@ -15,7 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+# Version 27 10/13/2017: Refactors code for understandability.  Better error message when Repeating section has an interval of 0.
+# Version 26 8/17/2017: Now generates a collated csv file for each set of batches, with a filename starting with the template name + 'collated' + the time.
 # Version 25 8/11/2017: Can now specify the maximum number of times that a sub-point of a Random section will be selected across an entire batch (counting each iteration separately).  Adds NaN checking to the minimum & maximum number of entries.  Fixes crash bug when a line in the tepmlate only contained store commands.
 # Version 24 11/8/2015: When outputting the csv, the column headers for the points use underscores to separate numbers instead of dashes, e.g., "v1_3". This change is to help with importing the data into Stata, which cannot have variable names containing dashes.  Ditto for the parents in the codebook, so that they match the csv files.
 # Version 23 11/1/2015: When outputting the csv, the column headers for the points have their values prepended by "v", e.g., "v1-3". This change is to help with importing the data into Stata, which cannot have variable names that start with numbers.  Ditto for the parents in the codebook, so that Excel formats that column as string.  Also, the csv files no longer have spaces after each comma.  Licensed under Apache License 2.0.
@@ -43,15 +44,15 @@
 # Version 1 6/20/2007
 
 
-# TODO:
-#Putting a space before the *leaf* special text in a fragment should not cause the program to fail.
-#I should just put repeatNever here like matchDifferent...simplify the below if-elif block of getChoiceFor...
+Version = 27
+Date = "October 13, 2017"
 
-Version = 25
-Date = "August 11, 2017"
-
-import os
+import distutils
 import glob
+import io
+import os
+import numpy
+import pandas
 import re
 import tempfile
 import shutil
@@ -88,6 +89,10 @@ def frange(limit1, limit2 = None, increment = 1.):
   return (limit1 + n*increment for n in xrange(0,count))
 
 def makeNameArrays(numDifferent, initName, iString, matchedPair):
+  """
+  Makes an array containing all the file names for each file in a batch.
+  """
+  
   nameArray = []
   numDifferentString = str(numDifferent)
   for j in range(numDifferent):
@@ -104,6 +109,10 @@ def makeNameArrays(numDifferent, initName, iString, matchedPair):
   return [docArray, savArray, txtArray, csvArray]
 
 def createFileNames(name, myTime, numberLength, numDifferent, matchedPair, i=1):
+  """
+  Creates all the filenames for a batch of files from a template filename.
+  """
+  
   tempName = name[:-4]+myTime
   iString = str(i)
   while len(iString)<numberLength: iString="0"+iString
@@ -116,6 +125,9 @@ def createFileNames(name, myTime, numberLength, numDifferent, matchedPair, i=1):
   return [docArray, savArray, txtArray, csvArray]
 
 def replaceFragments(inFile_strings):
+  """
+  Replaces file fragment special text with the text from the fragment.
+  """
   fragment_regex = r'''%file%(.*)%'''
   num_fragments_replaced = 0
   for line_number in xrange(len(inFile_strings)-1, -1, -1):
@@ -299,6 +311,9 @@ def replaceFragments(inFile_strings):
 
 
 def printCodebook(inFile, fileName):
+  """
+  Prints the codebook, if it does not exist or has changed.
+  """
   #instead of always printing the codebook, find the last codebook, check to see if this one will be the same, and if not, don't save it.
   print
   print "Checking whether codebook already exists."
@@ -425,6 +440,9 @@ def printCodebook(inFile, fileName):
 
 
 def createResumes(fileName):
+  """
+  Creates resumes from the template filename.
+  """
   inFile = open(fileName, 'r')
   matchedPair = False
   guiVersion = inFile.readline()
@@ -506,6 +524,7 @@ def createResumes(fileName):
 
   inFile.seek(0)
   global globalThisResumeNumber;
+  dfAllChoices = pandas.DataFrame()
   for batchOfResumes in range(numToMake):
     [outputFiles, saveChoicesFiles, txtChoicesFiles, csvChoicesFiles] = createFileNames(fileName, myTime, len(str(numToMake)), numDifferent, matchedPair, batchOfResumes+1)
     dictionaryMatchSame = {}
@@ -521,7 +540,8 @@ def createResumes(fileName):
       print >>saveChoicesFile, str(i+1)+" is the index of this text file within a matched set"
       tempTime = myTime
       if not tempTime:
-        tempTime = strftime("_%Y-%m-%d-%H-%M-%S")
+        tempTime = strftime("%Y-%m-%d-%H-%M-%S")
+      tempTime = tempTime.lstrip('_')
       print >>saveChoicesFile, tempTime+" is the current time as year, month, day, hour (out of 24), minute, second"
       print >>saveChoicesFile, str(Version)+" is the version of the Python program"
       print >>saveChoicesFile, guiVersion.rstrip('\n')
@@ -531,12 +551,12 @@ def createResumes(fileName):
       txtChoicesFile.write(outputFilename)
       csvChoicesFile = open(csvChoicesFilename, 'w')
       global globalCsvNames, globalCsvData
-      globalCsvNames = "filename,batch,numberOfBatches,resume,numberOfResumesPerBatch"
+      globalCsvNames = "filename,batch,numberOfBatches,resume,numberOfResumesPerBatch,yearMonthDayHourMinuteSecond"
       globalCsvData = outputFilename
       if "," in globalCsvData:
         globalCsvData.replace(",", "")
         print "\nWarning! the filename contained a comma, which is a delimiter in csv (comma-separated-variables) files.  So in the csv file (and only inside the csv file), the comma has been removed from the filename.\n\n"
-      globalCsvData += "," + str(batchOfResumes+1) + "," + str(numToMake) + "," + str(globalThisResumeNumber) + "," + str(numDifferent)
+      globalCsvData += "," + str(batchOfResumes+1) + "," + str(numToMake) + "," + str(globalThisResumeNumber) + "," + str(numDifferent) + "," + tempTime
       outputFile = open(outputFilename, 'w')
       #reset the store/recall variables for each file
       global globalMemory
@@ -562,11 +582,22 @@ def createResumes(fileName):
       txtChoicesFile.close()
       csvChoicesFile.writelines([globalCsvNames, "\n", globalCsvData])
       csvChoicesFile.close()
+      dfAllChoices = dfAllChoices.append(pandas.read_csv(io.StringIO(unicode('\n'.join([globalCsvNames, globalCsvData])))), ignore_index=True)
       print "Done with resume "+outputFilename
+
+  sortedColumns = dfAllChoices.columns.values.tolist()
+  sortedColumns.sort(key=distutils.version.LooseVersion)
+  firstColumns = ['filename', 'batch', 'numberOfBatches', 'resume', 'numberOfResumesPerBatch', 'yearMonthDayHourMinuteSecond']
+  newColumns = firstColumns + [col for col in sortedColumns if col not in firstColumns]
+  dfAllChoices = dfAllChoices[newColumns]
+  dfAllChoices.to_csv(fileName[:-4] + '_collated_' + tempTime + '.csv', index=False)
   inFile.close()
   return 1
 
 def skipElement(inFile, currentLine):
+  """
+  Skips an element in the template file, based on finding an end tag that matches the start tag on the next readline().
+  """
   theLine = inFile.readline()
   if (theLine == ''):
     print "\nError!  The skipElement function reached the end of the file unexpectedly."
@@ -593,6 +624,10 @@ def skipElement(inFile, currentLine):
   return 1
 
 def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+  """
+  Recersively generates a 'resume' file, making all decisions and generating all outputs.
+  """
+  
   theLine = inFile.readline()
   if not theLine: #readline returns an empty string when it reaches EOF
     print "\nError!  The recursiveGenerate function was looking for a new section when it reached the end of the file unexpectedly.  It expected to find a start tag (e.g., *random* 1-3-1 7).  Make sure the lines (in the template file) that contain start tags for Random and Constant and Dependent sections specify the correct number of subsections listed after the label (following the second space in the line).  Why did the function not find an end tag as the last line in the file?"
@@ -640,6 +675,10 @@ def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariab
 
 
 def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, currentString, currentPlusIntervalString, makeCodeBook):
+  """
+  Writes out the text in a Leaf section.
+  """
+  
   theLine = inFile.readline()
   lineNumber = 1
   if not theLine: #readline returns an empty string when it reaches EOF
@@ -703,6 +742,10 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
 
 
 def writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+  """
+  Writes out a Constant section, calling recursiveGenerate.
+  """
+  
   for i in range(myNumChoices):
     retval = recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName + '-' + str(i+1), dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
     if (retval < 0): return retval
@@ -719,6 +762,10 @@ def writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoic
 
 
 def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+  """
+  Writes out a Random section, calling enterRandomSection.
+  """
+  
   repeat = False
   repeatSame = False
   repeatNever = False
@@ -765,6 +812,9 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
         except ValueError:
           print "\nError!  For Repeating section " + myLabel + ", the interval value '" + temp[countSplit+3] + "' is neither an integer nor a decimal."
           return -32
+      if (repeatInterval == 0):
+        print "\nError!  For Repeating section " + myLabel + ", the interval value '" + temp[countSplit+3] + "' equals zero.  It must be a non-zero integer or decimal."
+        return -61
     elif temp[countSplit] == "*repeatSame*": repeatSame = True
     elif temp[countSplit] == "*repeatNever*": repeatNever = True
     elif temp[countSplit] == "*repeatNoDoubles*": repeatNoDoubles = True
@@ -873,6 +923,9 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
   return retval
 
 def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice):
+  """
+  Writes out a Dependend section, using recursiveGenerate.
+  """
   # find previous choice in dictionaryLastChoice
   for countSplit in range(3, len(temp)-1):
     if (temp[countSplit] == "*master*"):
@@ -910,7 +963,10 @@ def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, save
   return 1
 
 def intersection(list1, list2):
-  ### returns the intersection and then the items in list2 that are not in list 1
+  """
+  Returns the intersection and then the items in list2 that are not in list 1.
+  """
+  
   int_dict = {}
   not_int_dict = {}
   list1_dict = {}
@@ -921,7 +977,9 @@ def intersection(list1, list2):
   return [int_dict.keys(), not_int_dict.keys()]
 
 def nonUniformShuffle(freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage):
-  ### shuffle, but obey nonUniformFirstSubPoint
+  """
+  Shuffle the list, but obey any nonUniformFirstSubPoint percentage.
+  """
   shuffle(freeToChoose)
   if (nonUniformFirstSubPoint and (0 in freeToChoose)):
     freeToChoose.remove(0)
@@ -931,6 +989,9 @@ def nonUniformShuffle(freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubP
       freeToChoose.append(0)
 
 def getChoiceForRepeatSame(myLabel, dictionaryRepeatSame, freeToChoose, myVariableName):
+  """
+  Get a Random section's choice if RepeatSame.
+  """
   if myLabel in dictionaryRepeatSame:
     if dictionaryRepeatSame[myLabel] in freeToChoose: chosenSubelement = dictionaryRepeatSame[myLabel]
     else:
@@ -944,41 +1005,11 @@ def getChoiceForRepeatSame(myLabel, dictionaryRepeatSame, freeToChoose, myVariab
   else: chosenSubelement = freeToChoose[0]
   return chosenSubelement
 
-
-def getChoiceForMatchDifferentAndRepeatNever(myLabel, myVariableName, dictionaryRepeatNever, freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, myNumChoices):
-###if matchDifferent and repeatNever, need to precompute all results to prevent a locking situation (or test for inevitable locking)  but what about nested repeats?
-###This is a complicated possibility.  If the results for each text file were determined randomly, just avoiding previous choices (for this file and others), then it is possible to enter a blocking situation (e.g., files a and b choose between results 0,1,2 for three repeats.  'a' chooses 201, 'b' randomly chooses 02 and then has no valid third choice).  Furthermore, if this section is nested within a Repeat section, then it is possible that not all of the text files will be making this choice on the same repeat iteration, complicating the generation of optimal permutations across all text files.
-###We have decided to do this the dumb/simple way.  The code will take each text file as it comes and each choice as it comes, obeying the rules for Match Different and Repeat Never.  If it runs into a blocking situation, it will error out.
-  if myLabel in dictionaryRepeatNever:
-    [alreadyTaken, freeToChoose] = intersection(dictionaryRepeatNever[myLabel], freeToChoose)
-    if len(freeToChoose) < 1:
-      [alreadyTaken, freeToChoose] = intersection(dictionaryRepeatNever[myLabel], range(myNumChoices))
-      if len(freeToChoose) < 1:
-        print "\nError! Disobeying Repeat Never (aka 'Always different when repeat'), which says that a section should not be chosen more than once in a single text file.  To alleviate this problem: add more choices or reduce the number of repetitions."
-        print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
-        return -24
-      else:
-        print "\nError!  Failed to obey both Repeat Never (aka 'Always different when repeat') and either Match Different or Match Only One Ever.  This section or one of its parents repeats, and this section is supposed to always choose a different result than any chosen previously for this text file or any other.  It failed.  To alleviate this problem: add more choices, reduce the number of matched files, or reduce the number of repetitions.  This error may occur even if there exists a set of permutations of the choices that obeys both restrictions."
-        print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
-        return -15
-    nonUniformShuffle(freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage)
-    chosenSubelement = freeToChoose[0]
-  else: chosenSubelement = freeToChoose[0]
-  return chosenSubelement
-
-def getChoiceForRepeatNeverNotMatchDifferent(myLabel, myVariableName, dictionaryRepeatNever, freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage):
-  if myLabel in dictionaryRepeatNever:
-    [alreadyTaken, freeToChoose] = intersection(dictionaryRepeatNever[myLabel], freeToChoose)
-    if len(freeToChoose) < 1:
-      print "\nError! Disobeying Repeat Never (aka 'Always different when repeat'), which says that a section should not be chosen more than once in a single text file.  To alleviate this problem: add more choices or reduce the number of repetitions."
-      print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
-      return -33
-    nonUniformShuffle(freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage)
-    chosenSubelement = freeToChoose[0]
-  else: chosenSubelement = freeToChoose[0]
-  return chosenSubelement
-
 def getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastChoice, myLabel, freeToChoose):
+  """
+  Get a Random section's choice if RepeatDifferentDouble.
+  """
+  
   if random()*100. < repeatDifferentDoublePercentage: chosenSubelement = dictionaryLastChoice[myLabel]
   else:
     freeToChoose.remove(dictionaryLastChoice[myLabel])
@@ -987,30 +1018,38 @@ def getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastC
   return chosenSubelement
 
 def getChoiceForMatchSame(repeatSame, myLabel, myVariableName, dictionaryMatchSame, dictionaryRepeatSame, repeatNever, dictionaryRepeatNever):
-    if repeatSame and myLabel in dictionaryRepeatSame and dictionaryMatchSame[myVariableName] != dictionaryRepeatSame[myLabel]:
-      print "\nError! Cannot satisfy both Match Same and Repeat Same (aka 'Same when repeat')."
-      print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
-      print "\nThis Random section or one of its parents repeats.  This section is supposed to always choose the same result as it has previously chosen, and is supposed to choose the same result as the matched text files chose on the same iteration of the repetition.  The program was not able to satisfy both requirements.  Most likely this random section is within another random section, and that parent random section does not use Match Same.  So this section does not run on the same iterations for all the matched files.  In the first iteration it did run for this file, no previous file had chosen this section, and this file chose differently than the others.  Then in a future iteration, this file and a previous one both ran, putting the two requirements in conflict."
-      print "\nTo solve this problem, make the parent repeating section Match Same, or remove one of the two restrictions.  Alternatively, if the current template file is run again there is a chance that the text files will choose similarly and this error will not appear."
-      return -16
-    if repeatNever and myLabel in dictionaryRepeatNever and dictionaryMatchSame[myVariableName] in dictionaryRepeatNever[myLabel]:
-      print "\nError! Cannot satisfy both Match Same and Repeat Never (aka 'Always different when repeat')."
-      print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
-      print "\nThis Random section or one of its parents repeats.  This section is supposed to always choose the same result as the matched text files chose on the same iteration of the repetition, and this text file is not supposed to contain duplicates. The program was not able to satisfy both requirements. Most likely this random section is within another random section, and that parent random section does not use Match Same.  So this section does not run on the same iterations for all the matched files.  This text file made a choice in an iteration that no previous file chose during.  Then in a later iteration, the previous files made that same choice and now this file cannot satisfy both requirements."
-      print "\nTo solve this problem, make the parent repeating section Match Same, or remove one of the two restrictions.  Alternatively, if the current template file is run again there may be a chance that the text files will choose similarly and this error will not appear."
-      return -17
-    chosenSubelement = dictionaryMatchSame[myVariableName]
-    return chosenSubelement
+  """
+  Get a Random section's choice if MatchSame.
+  """
+  
+  if repeatSame and myLabel in dictionaryRepeatSame and dictionaryMatchSame[myVariableName] != dictionaryRepeatSame[myLabel]:
+    print "\nError! Cannot satisfy both Match Same and Repeat Same (aka 'Same when repeat')."
+    print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
+    print "\nThis Random section or one of its parents repeats.  This section is supposed to always choose the same result as it has previously chosen, and is supposed to choose the same result as the matched text files chose on the same iteration of the repetition.  The program was not able to satisfy both requirements.  Most likely this random section is within another random section, and that parent random section does not use Match Same.  So this section does not run on the same iterations for all the matched files.  In the first iteration it did run for this file, no previous file had chosen this section, and this file chose differently than the others.  Then in a future iteration, this file and a previous one both ran, putting the two requirements in conflict."
+    print "\nTo solve this problem, make the parent repeating section Match Same, or remove one of the two restrictions.  Alternatively, if the current template file is run again there is a chance that the text files will choose similarly and this error will not appear."
+    return -16
+  if repeatNever and myLabel in dictionaryRepeatNever and dictionaryMatchSame[myVariableName] in dictionaryRepeatNever[myLabel]:
+    print "\nError! Cannot satisfy both Match Same and Repeat Never (aka 'Always different when repeat')."
+    print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
+    print "\nThis Random section or one of its parents repeats.  This section is supposed to always choose the same result as the matched text files chose on the same iteration of the repetition, and this text file is not supposed to contain duplicates. The program was not able to satisfy both requirements. Most likely this random section is within another random section, and that parent random section does not use Match Same.  So this section does not run on the same iterations for all the matched files.  This text file made a choice in an iteration that no previous file chose during.  Then in a later iteration, the previous files made that same choice and now this file cannot satisfy both requirements."
+    print "\nTo solve this problem, make the parent repeating section Match Same, or remove one of the two restrictions.  Alternatively, if the current template file is run again there may be a chance that the text files will choose similarly and this error will not appear."
+    return -17
+  chosenSubelement = dictionaryMatchSame[myVariableName]
+  return chosenSubelement
   
 def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
+  """
+  Get a Random section's chosen subelement based on RepeatNever, MatchOnlyOneEver, MatchSame, etc.
+  """
+  
+  freeToChoose = range(myNumChoices)
   if matchDifferent and myVariableName in dictionaryMatchDifferent:
-    [alreadyTaken, freeToChoose] = intersection(dictionaryMatchDifferent[myVariableName], range(myNumChoices))
+    [alreadyTaken, freeToChoose] = intersection(dictionaryMatchDifferent[myVariableName], freeToChoose)
     if len(freeToChoose) < 1:
       print "\nError! Disobeying Match Different.  Not enough choices."
       print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
       print "\nThis random section or one of its parents repeats.  This section is not supposed to have the same result as any of the text files it is matched with for the same iteration in the repetition.  The program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections)."
       return [-19, -1]
-  else: freeToChoose = range(myNumChoices)
 
   if matchMaxSelectionsPerSubPoint and (myLabel in dictionaryMaxSelectionsPerSubPoint):
     [reachedMax, freeToChoose] = intersection([i for i, j in enumerate(dictionaryMaxSelectionsPerSubPoint[myLabel]) if j >= maxSelectionsPerSubPointInteger], freeToChoose)
@@ -1020,8 +1059,6 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
       print "\nThis random section is not supposed to select the same sub-point more than " + str(maxSelectionsPerSubPointInteger) + " times throughout an entire batch. The Program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections)."
       return [-39, -1]
 
-  #I should just put repeatNever here like matchDifferent...simplify the below if-elif block of getChoiceFor...
-
   global globalThisResumeNumber;
   if matchOnlyOneEver and myLabel in dictionaryMatchOnlyOneEver:
     dictOfResumeToChoices = dictionaryMatchOnlyOneEver[myLabel]
@@ -1029,10 +1066,26 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
       if (aResumeNumber != globalThisResumeNumber):
         [alreadyTaken, freeToChoose] = intersection(dictOfResumeToChoices[aResumeNumber], freeToChoose)
     if len(freeToChoose) < 1:
-      print "\nError! Disobeying Match One Only Ever (possibly combined with Match Different).  Not enough choices."
+      print "\nError! Disobeying Match One Only Ever (possibly combined with Match Different and/or Max Selections Per Sub-Point).  Not enough choices."
       print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName) + ". The resume number: " + str(globalThisResumeNumber)
       print "\nThis random section or one of its parents repeats.  This section is not supposed to have the same result as any of the text files it is matched with.  The program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections)."
       return [-36, -1]
+
+  if myLabel in dictionaryRepeatNever:
+    ###If matchDifferent and repeatNever, we would need to precompute all results to prevent a locking situation (or test for inevitable locking), but then what about nested repeats?
+    ###This is a complicated possibility.  If the results for each text file were determined randomly, just avoiding previous choices (for this file and others), then it is possible to enter a blocking situation (e.g., files a and b choose between results 0,1,2 for three repeats.  'a' chooses 201, 'b' randomly chooses 02 and then has no valid third choice).  Furthermore, if this section is nested within a Repeat section, then it is possible that not all of the text files will be making this choice on the same repeat iteration, complicating the generation of optimal permutations across all text files.
+    ###We have decided to do this the dumb/simple way.  The code will take each text file as it comes and each choice as it comes, obeying the rules for Match Different and Repeat Never (aka 'Always different when repeat').  If it runs into a blocking situation, it will error out.
+    [alreadyTaken, freeToChoose] = intersection(dictionaryRepeatNever[myLabel], freeToChoose)
+    if len(freeToChoose) < 1:
+      [alreadyTaken, freeToChoose] = intersection(dictionaryRepeatNever[myLabel], range(myNumChoices))
+      if len(freeToChoose) < 1:
+        print "\nError! Disobeying Repeat Never (aka 'Always different when repeat'), which says that a section should not be chosen more than once in a single text file.  To alleviate this problem: add more choices or reduce the number of repetitions."
+        print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
+        return [-24, -1]
+      else:
+        print "\nError!  Failed to obey both Repeat Never (aka 'Always different when repeat') and Match Different, Match Only One Ever, and/or Max Selections Per Sub-Point.  This section or one of its parents repeats, and this section is supposed to always choose a different result than any chosen previously for this text file or any other.  It failed.  To alleviate this problem: add more choices, reduce the number of matched files, or reduce the number of repetitions.  This error may occur even if there exists a set of permutations of the choices that obeys both restrictions."
+        print "The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName)
+        return [-15, -1]
 
   #deal with minimum and maximum numbers of different subelements
   global globalDictRangeChoices
@@ -1048,13 +1101,11 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
 
   nonUniformShuffle(freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage)
       
-  #note that matchDifferent and matchOnlyOneEver behave exactly the same after the freeToChoose variable is populated
   if matchSame and myVariableName in dictionaryMatchSame: chosenSubelement = getChoiceForMatchSame(repeatSame, myLabel, myVariableName, dictionaryMatchSame, dictionaryRepeatSame, repeatNever, dictionaryRepeatNever)
   elif repeatSame: chosenSubelement = getChoiceForRepeatSame(myLabel, dictionaryRepeatSame, freeToChoose, myVariableName)
-  elif (matchDifferent or matchOnlyOneEver) and repeatNever: chosenSubelement = getChoiceForMatchDifferentAndRepeatNever(myLabel, myVariableName, dictionaryRepeatNever, freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, myNumChoices)
-  elif repeatNever: chosenSubelement = getChoiceForRepeatNeverNotMatchDifferent(myLabel, myVariableName, dictionaryRepeatNever, freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage)
   elif repeatDifferentDouble and myLabel in dictionaryLastChoice: chosenSubelement = getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastChoice, myLabel, freeToChoose)
   else: chosenSubelement = freeToChoose[0]
+  
   if chosenSubelement < 0: return [chosenSubelement, -1]
 
   if repeatSame: dictionaryRepeatSame[myLabel] = chosenSubelement
@@ -1062,34 +1113,45 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
   if matchDifferent:
     if myVariableName in dictionaryMatchDifferent: dictionaryMatchDifferent[myVariableName] += [chosenSubelement]
     else: dictionaryMatchDifferent[myVariableName] = [chosenSubelement]
+    
   if repeatNever:
     if myLabel in dictionaryRepeatNever: dictionaryRepeatNever[myLabel] += [chosenSubelement]
     else: dictionaryRepeatNever[myLabel] = [chosenSubelement]
+    
   if matchOnlyOneEver:
     if myLabel in dictionaryMatchOnlyOneEver:
       if globalThisResumeNumber in dictionaryMatchOnlyOneEver[myLabel]:
         dictionaryMatchOnlyOneEver[myLabel][globalThisResumeNumber] += [chosenSubelement]
       else:
         dictionaryMatchOnlyOneEver[myLabel][globalThisResumeNumber] = [chosenSubelement]
+        
     else:
       dictionaryMatchOnlyOneEver[myLabel] = {}
       dictionaryMatchOnlyOneEver[myLabel][globalThisResumeNumber] = [chosenSubelement]
       
   if myLabel in dictionaryLastChoice and chosenSubelement == dictionaryLastChoice[myLabel]: sameChoiceAsLastTime = True
   else: sameChoiceAsLastTime = False
+  
   dictionaryLastChoice[myLabel] = chosenSubelement
   if (myLabel in globalDictRangeChoices):
     globalDictRangeChoices[myLabel][1] += 1
     if not sameChoiceAsLastTime: globalDictRangeChoices[myLabel][2] += 1;
+    
   if matchMaxSelectionsPerSubPoint:
     if myLabel not in dictionaryMaxSelectionsPerSubPoint:
       dictionaryMaxSelectionsPerSubPoint[myLabel] = [0] * myNumChoices
+      
     dictionaryMaxSelectionsPerSubPoint[myLabel][chosenSubelement] += 1
+    
   return [chosenSubelement, sameChoiceAsLastTime]
 
 
 
 def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
+  """
+  For a Random section: get which subelement to enter, update outputs, then call recursiveGenerate.
+  """
+  
   [chosenSubelement, sameChoiceAsLastTime] = getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
   if chosenSubelement < 0: return chosenSubelement
   if len(globalDelayedWrite)>0 and not sameChoiceAsLastTime: replaceNextString(currentString, outFile, myLabel)
@@ -1116,6 +1178,12 @@ def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferent
   return 1
 
 def replaceNextString(currentString, outFile, myLabel):
+  """
+  Replace the special *next* string with the actual value that would be next.
+  
+  If we do not yet know the next value, just store the text in globalDelayedWrite.
+  """
+  
   global globalDelayedWrite
   tempList = []
   readyToPrint = True
@@ -1130,6 +1198,10 @@ def replaceNextString(currentString, outFile, myLabel):
   else: globalDelayedWrite = tempList 
 
 def isTemplateFile(filename):
+  """
+  Check if filename is a valid template.
+  """
+  
   try:
     inFile = open(filename, 'r')
   except:

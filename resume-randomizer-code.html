@@ -40,7 +40,7 @@ textarea {width: 100%;}
   @licstart  The following is the entire license notice for the 
   JavaScript code in this page.
   
-  Copyright 2015-2017  Ryan Beasley and Joanna Lahey
+  Copyright 2015  Ryan Beasley and Joanna Lahey
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -63,7 +63,10 @@ textarea {width: 100%;}
 
 lineNumber = 0;
 
-function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
+/**
+ * This parses a copy of the template, recursively, and creates the GUI.
+ */
+function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe, parentTypes) {
     var tempSplit = new Array();
     tempSplit = templateCopy[lineNumber].split(" ");
     var myText = tempSplit[0];
@@ -74,15 +77,20 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	return -1;
     }
     var myLabel = tempSplit[1];
+    parentTypes[myLabel] = myText;
     var hidden = false;
     if ((tempSplit.length > 3) && (tempSplit[3] == "*hide*")) hidden = true;
     var hideMe = hidden || parentHidden;
     if (hidden && !parentHidden) document.write('<p><li><a name="' + myLabel + '" id="' + myLabel + '">'+myLabel+'</a>');
     if (parentHidden) document.write('<a name="' + myLabel + '" id="' + myLabel + '"></a>');
-    if (hideMe) document.write('<hidden>');
-    else {
+    if (hideMe) {
+	document.write('<hidden>');
+    } else {
 	document.write('<p><li>');
-	if (myLabel != "1") document.write('<input type="button" value="Add section here" onClick="parent.addSectionAbove(\'' +myLabel+ '\');"><br>');
+	if (myLabel != "1") {
+	    var parentLabel = myLabel.split('-').slice(0, -1).join('-');
+	    if (parentTypes[parentLabel] != "*dependent*") document.write('<input type="button" value="Add section here" onClick="parent.addSectionAbove(\'' +myLabel+ '\');"><br>');
+	}
 	document.write('<a name="' + myLabel + '" id="' + myLabel + '">'+myLabel+'</a>');
     }
     document.write(' <select id="type' + myLabel + '" onchange="parent.regenerate(\'' +myLabel+ '\');">');
@@ -94,7 +102,7 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	document.write('<option value="*dependent*">Dependent</option>');
 	document.write('</select>');
 	lineNumber++;
-	if (canDeleteMe) document.write(' <input type="button" value="Delete this section" onClick="parent.deleteSection(\'' +myLabel+ '\');">');
+	if (canDeleteMe && (parentTypes[parentLabel] != "*dependent*")) document.write(' <input type="button" value="Delete this section" onClick="parent.deleteSection(\'' +myLabel+ '\');">');
 	var tempLineNumber = lineNumber;
 	while ((tempLineNumber < templateCopy.length) && (templateCopy[tempLineNumber].indexOf("*end_leaf*")<0) && (templateCopy[tempLineNumber].indexOf(myLabel)<0)) {
 	    tempLineNumber++;
@@ -323,7 +331,7 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	for (var countNums = 0; countNums < myNumChoices; countNums++) {
 	    if ((myText == "*random*") && (hideMe)) document.write('<randomSub>');
 	    if ((myText == "*dependent*") && (hideMe)) document.write('<dependentSub>');
-	    returnVal = parseTemplateCopy(repeat || repeatParent, hideMe, myNumChoices>1);
+	    returnVal = parseTemplateCopy(repeat || repeatParent, hideMe, myNumChoices>1, parentTypes);
 	    if ((myText == "*random*") && (hideMe)) document.write('</randomSub>');
 	    if ((myText == "*dependent*") && (hideMe)) document.write('</dependentSub>');
 	    if (returnVal < 0) return returnVal;
@@ -331,7 +339,13 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
 	if (hideMe) {
 	    if (myText == "*random*") document.write('</randomStart>');
 	    if (myText == "*dependent*") document.write('</dependentStart>');
-	} else document.write('<br><input type="button" value="Add section here" onClick="parent.addSectionBelow(\'' +myLabel+ '\');"></ul>');
+	} else {
+	    if (myText == "*dependent*") {
+		document.write('</ul>');
+	    } else {
+		document.write('<br><input type="button" value="Add section here" onClick="parent.addSectionBelow(\'' +myLabel+ '\');"></ul>');
+	    }
+	}
 
 	if (templateCopy[lineNumber].indexOf("*end_" + myText.substring(1,myText.length) + " " + myLabel) < 0) {
 	    document.write("</hidden><p style='background-color:yellow;'>Error! Template text (in right frame) is malformed.<br>Could not find <br>*end_" + myText.substring(1,myText.length) + " " + myLabel + "<br>Review the template text in the frame to the right and make sure that each *leaf*, *constast*, *random*, and *dependent* section has a corresponding *end_leaf*, *end_constant*, etc., line, and that the section labels match.  So if there is a line '*leaf* 1-1', then further down in the template text there must be the line '*end_leaf* 1-1'.</p>");
@@ -344,6 +358,9 @@ function parseTemplateCopy(repeatParent, parentHidden, canDeleteMe) {
     return -1;
 }
 
+/**
+ * Scrolls the window to the ID stored in guiHash.
+ */
 function scrollToElement() {
     var elem = parent.guiHash;
     if (typeof elem == 'string') elem = document.getElementById(elem);
@@ -368,9 +385,9 @@ if (typeof parent.templateMad === "undefined") {
 }
 </SCRIPT>
 
-<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 25</span></h1>
+<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 27</span></h1>
 <p>This webpage generates templates for the Resume Randomizer program.
-<br>Firefox (version 23.0.1) is the recommended browser.  Internet Explorer (version 10.0) also works except for the "hide" checkboxes.  Chrome (version 29.0) is known not to work (due to the way Chrome handles inter-frame communication when in local mode).  You may be required to enable "active content" or "allow blocked content".
+<br>Firefox (version 56.0) is the recommended browser.  Internet Explorer (version 11.674) also works.  Chrome (version 61.0) is known not to work (due to the way Chrome handles inter-frame communication when in local mode), and Safari has been reported not to work.  Regardless of browser, you may be required to enable "active content" or "allow blocked content".
 <p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>.
 <hr>
 <h2><a name="basic">Basic Use</a></h2>
@@ -397,7 +414,7 @@ if (typeof parent.templateMad === "undefined") {
   document.write("<p><ul>")
   lineNumber++;
   while (lineNumber < templateCopy.length) {
-    if (parseTemplateCopy(false, false, false) < 0) break;
+    if (parseTemplateCopy(false, false, false, {}) < 0) break;
   }
   document.write("</ul>");
 }
@@ -409,7 +426,7 @@ if (typeof parent.templateMad === "undefined") {
 <h3>Language and file encoding</h3> The fourth example template is "example_cyrillic_template.rtf", and demonstrates non-English resume generation.  The software allows for various languages and file encodings.  Chinese (simplified) and Cyrillic text have been tested.  Any Unicode (e.g., utf-8) encoded file should be handled correctly.  If any problems arise, please contact us.
 
 <h3>Output of resume-randomizer.exe</h3>
-<p>The resume-randomizer.exe program produces a codebook file, plus four files for each resume.  All the created files are plain-text.  The resume itself ends in ".doc".  Since the file is plaintext, it does not need to be opened by Microsoft Word (or Open Office), but can be loaded into any text editor or webbrowser.  Its extension can be changed to ".txt" or ".html" (or ".tex"), to make it easier to load in a different program.</p>
+<p>The resume-randomizer.exe program produces a codebook file, a collated data file, and four files for each resume.  All the created files are plain-text.  The resume itself ends in ".doc".  Since the file is plaintext, it does not need to be opened by Microsoft Word (or Open Office), but can be loaded into any text editor or webbrowser.  Its extension can be changed to ".txt" or ".html" (or ".tex"), to make it easier to load in a different program.</p>
 <p>The files ending in ".sav", ".txt", and ".csv" are data files that contain the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  These data files are meant to assist analysis of experimental results with respect to resume text.  Each of these files contains sufficient information to reconstruct the resume from the template:
 <ul>
 <li>The ".txt" file contains just the filename for the resume and then a tab-delimited list of the choices made by the program in creating the resume.  The choices are numbers 0 through n-1 where n is the number of subsections.  So if the program generated a resume by randomly always choosing the first option in each Random section, the ".txt" file would contain the filename followed by zeros, all separated by tabs.  Parsing this information requires understanding the structure of the template.  Note that the FileGather.exe program will gather all of the information from these files into a single file to make it easier to load into another program (e.g., Excel).
@@ -417,6 +434,7 @@ if (typeof parent.templateMad === "undefined") {
 <li>The ".csv" file is meant to make it easier to load the data into an analysis program (e.g., Stata).  It consists of comma-separated text, with one line containing variable names (e.g., the identification of the section making a choice), and a second line with the choices made by each Random and Dependent section, for each iteration. (Note that the Dependent section choices <em>should</em> be duplicates of the Random sections they depend upon.)  To load the data into Stata, use the "import delimited" and append commands; for example, see the section on "Reading in, and combining data from ASCII (text) files" at the UCLA: Academic Technology Services, Statistical Consulting Group's <a href="http://www.ats.ucla.edu/stat/stata/faq/append_many_files.htm" target="_blank">Stata FAQ</a>.  Beware that the data saved to the ".csv" files is in a different format than the data saved to the ".txt" and ".doc" files.  First, the variable names are not the same as the section labels, due to the inclusion of the iteration.  Second, the text "v" is prepended onto the point labels.  For example, if section 1-2 is Random and repeating with start 10, end 14, interval 2, then the variable names would contain v1-2-iter10, v1-2-iter12, and v1-2-iter14.  Third, the choices on the second line run from 1 through n, where n is the number of subsections.
 </ul>
 </p>
+<p>A single "collated" csv file is also created that simply contains all the data from each of the other csv files.  So just that one file is necessary for data analysis.  Note that a new collated csv file is created each time the executable generates a new set of batches of resumes.  The collated csv files should not overwrite each other because each contains the date and time of creation in its filename.</p>
 <p>The single codebook file ends in ".xls".  It is a tab-delimited file.  Each line contains the text for a Leaf, along with the parent section's label (e.g., 1-3-8), and the number of this Leaf in that parent section.  The codebook is meant to assist interpretation of the ".csv" files, which contain the number of the Leaf selected for each Random or Dependent section in each iteration.  The codebook is particularly useful when the template contains "file fragments" because the text from the fragments are collated into the codebook along with the parent section label and the Leaf number.</p>
 <ul>
 <li>If the program finds one or more existing codebook files for the template file, it will check to see if the last-modified codebook is correct for the current template.  If there is a previous codebook and it is correct, no new codebook is created.  If the program does not find a codebook file, or the codebook file is not correct, a new codebook file will be created.  The program will not overwrite previous codebook files (the new codebook's filename will contain the lowest available integer).
@@ -467,6 +485,11 @@ In this example, the email address in Leaf 1-3 is based on the random selection 
 In this example, the first subpoint of a random section is selected with a specific probability.  If you create a resume you will see that 2/3rds of the letters are "a", and the remaining sub-points ("b" and "c") are chosen with uniform probability. By nesting random sections, each with a "first sub-point percentage", it is possible to exactly specify probabilities for each possible leaf.
 <h4>Example 17, matched max selections per sub-point</h4><input type="button" value="Load Example 17" onClick="parent.loadExample17()">
 In this example, the schools in the sub-points of the first random section will not be selected more than twice each, while the names in the sub-points of the second random section will each only be selected once. If you create a batch of 4 resume you will see that exactly half of the resumes have "School A" while the other half have "School B".  If you create a batch of 3 resumes, two of them will have the same school, and the third resume will have the other school.  If you attempt to create a batch of more than 4 resumes, the Resume Randomizer program will fail with an error because the first Random section only has two sub-points, and each can only be selected up to twice, for a maximum of 4 selections.
+<h4>Example 18, 2x2 the simple way</h4><input type="button" value="Load Example 18" onClick="parent.loadExample18()">
+If you want a 2x2 design (or any size of factorial study), the simple way is to create a Random section that is the size of the multiple of the factors.  So a 2x2 on name and age becomes a Random section with four subpoints.
+<h4>Example 19, factorial design using the same pool of characteristics</h4><input type="button" value="Load Example 19" onClick="parent.loadExample19()">
+If you want a factorial design in which the characteristics are "matched" across the treatments, then the template must have all the resumes pass through the same Random section for those characteristics.
+In this example, the Random MatchDifferent point 1-5 will make sure that there is always 1 north-college, 1 north-high school, 1 south-college, and 1 south-high school.  To make sure that the north resumes have different names, the names in the two north sub-points (1-5-1-1 and 1-5-2-1) are both dependent on an earlier Random section (1-1) that is set to MatchDifferent.  Ditto for the south names.  So all resumes pick which north name they would use, and which south name they would use, prior to determining whether they should use the north or south name.  Ditto for the college & high school names.
 <hr>
 
 <h2><a name="advanced">Advanced Use</a></h2>
@@ -525,6 +548,8 @@ Another way of having a Random section affect later text is through template-cre
 <hr>
 <h2><a name="changelog">Changelog</a></h2>
 <ul>
+<li>Version 27 on 10/13/2017: Adds examples for factorial designs. Better error message if interval for repeating section is zero. Fixes bugs with "Add section here" and "Delete this section" buttons with respect to Dependent sections.
+<li>Version 26 on 8/17/2017: The executable collates the csv files into a single file.
 <li>Version 25 on 8/11/2017: Random sections can now be matched to have a maximum number of times that each sub-point can be selected in a batch.
 <li>Version 24 on 11/8/2015: The csv files and codebook use underscores to separate the numbers in point labels.  For example, point 1-3-5-11 will be saved in the file as "v1_3_5_11".  This change is to help with importing the data into Stata (which drops dashes from variable names).
 <li>Version 23 on 11/1/2015: The csv files and codebook prepend points with "v".  For example, point 1-3-5-11 will be saved in the file as "v1-3-5-11".  This change is to help with importing the data into Excel (which otherwise tries to format the point identifiers as dates), and Stata (which will not import variable names that start with numbers).
@@ -546,6 +571,6 @@ Another way of having a Random section affect later text is through template-cre
 </ul>
 <p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>.
 <hr>
-<small>Copyright 2015-2017 Ryan Beasley and Joanna Lahey.</small>
+<small>Copyright 2015 Ryan Beasley and Joanna Lahey.</small>
 </BODY>
 </HTML>
