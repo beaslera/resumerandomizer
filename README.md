@@ -3,7 +3,7 @@ Resume Randomizer
 
 Resume Randomizer randomly combines text fragments, and was created to assist correspondence studies.
 
-The Resume Randomizer program comes in two parts: the webpage (resume-randomizer-framemaster.html) allows an experimenter to define and input the characteristics of the resume or correspondence general template, while the python script file (resume-randomizer.py) generates resumes from those templates.  Here we discuss use of the program in creating resumes, but the program is general enough to be used for other text randomization tasks such as creating cover letters or creating randomized software or HTML pages.
+The Resume Randomizer program comes in two parts: the webpage (resume-randomizer.html) allows an experimenter to define and input the characteristics of the resume or correspondence general template, while the python script file (resume-randomizer.py) generates resumes from those templates.  Here we discuss use of the program in creating resumes, but the program is general enough to be used for other text randomization tasks such as creating cover letters or creating randomized software or HTML pages.
 
 Motivation for use of this software is discussed in:
 [Lahey, Joanna and Beasley, Ryan A., Computerizing Audit Studies (July 1, 2007).](http://ssrn.com/abstract=1001038) http://dx.doi.org/10.2139/ssrn.1001038
@@ -26,7 +26,7 @@ Instructions:
 
 1. Place all of the files in the same folder.
 
-2. The webpage consists of three html files.  All three are necessary, but only "resume-randomizer-framemaster.html" should be loaded into your web browser.  The webpage has been tested and works in Firefox v23.0.1 and in Internet Explorer v10.0, but it does not work in Chrome v29.0 (due to the way Chrome handles inter-frame communication when in local mode).  The webpage contains further explanation and instructions.
+2. The webpage consists of one html file.  Load "resume-randomizer.html" into your web browser.  The webpage has been tested and works in Firefox, Chrome, Safari, Internet Explorer, and Microsoft Edge.  The webpage contains further explanation and instructions.
 
-3. Once one or more template files have been generated, use Python 2.7 to run the python script "resume-randomizer.py" to generate resumes.  Four sample template files are provided to demonstrate the use of the program: "example_cover_letter_template.rtf", "example_resume_template.rtf", "example_resume_template_with_fragments.rtf", and "example_cyrillic_template.rtf".  **Alternatively to using Python**, download a Windows executable of the resume-randomizer script in a zip file from the [NBER website](http://www.nber.org/resume-audit/).
+3. Once one or more template files have been generated, use Python 3.6 or later to run the python script "resume-randomizer.py" to generate resumes.  Four sample template files are provided to demonstrate the use of the program: "example_cover_letter_template.rtf", "example_resume_template.rtf", "example_resume_template_with_fragments.rtf", and "example_cyrillic_template.rtf".  **Alternatively to using Python**, download a Windows executable of the resume-randomizer script in a zip file from the [NBER website](http://www.nber.org/resume-audit/).
 
