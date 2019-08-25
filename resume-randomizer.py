@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
 # Version 29 12/3/2017: Adds batch special text, e.g., %numberofbatches%. Program now ignores any lines below the end tag for the first (top-level) section, even if the first section is Random or Leaf.
 # Version 28 10/20/2017: Update to Python 3.6.2.  Bugfix in frange, which used to return [0] when given start=0.0, stop=3.0, interval=2.0, but should have returned [0, 2]...this only impacted Repeating sections with non-decimel start/stop/interval parameters. Replaced call to dict.has_key(). Replaced calls to map() and filter with list comprehensions. Replaced xrange with range. Replaced print statements with functions. All input/output files open in text mode and try default text encoding, then if that fails attempt to automatically detect encoding.  Line endings will be automatically converted to the system-specific to assist cross-platform templates.  Removed unicode function. Add try/except around each print-to-file.  Fixed bug making the sav file have an incorrect value for the number within a batch. Rearranged the instructive text at the top of sav files.
@@ -47,8 +48,8 @@
 # Version 1 6/20/2007
 
 
-Version = 30
-Date = "December 4, 2017"
+Version = 31
+Date = "August 25, 2019"
 
 import distutils
 import glob
@@ -749,7 +750,7 @@ def createResumes(filename):
       txtChoicesFile.close()
       csvChoicesFile.writelines([globalCsvNames, "\n", globalCsvData])
       csvChoicesFile.close()
-      dfAllChoices = dfAllChoices.append(pandas.read_csv(io.StringIO('\n'.join([globalCsvNames, globalCsvData]))), ignore_index=True)
+      dfAllChoices = dfAllChoices.append(pandas.read_csv(io.StringIO('\n'.join([globalCsvNames, globalCsvData]))), ignore_index=True, sort=False)
       print("Done with resume "+outputFilename)
 
   sortedColumns = dfAllChoices.columns.values.tolist()
@@ -757,7 +758,9 @@ def createResumes(filename):
   firstColumns = ['filename', 'batch', 'numberOfBatches', 'resume', 'numberOfResumesPerBatch', 'yearMonthDayHourMinuteSecond']
   newColumns = firstColumns + [col for col in sortedColumns if col not in firstColumns]
   dfAllChoices = dfAllChoices[newColumns]
-  dfAllChoices.to_csv(filename[:-4] + '_collated_' + tempTime + '.csv', index=False)
+  collatedFilename = filename[:-4] + '_collated_' + tempTime + '.csv'
+  print("Saving the collated data in a file named ", collatedFilename)
+  dfAllChoices.to_csv(collatedFilename, index=False)
   inFile.close()
   return 1
 
