@@ -56,13 +56,3 @@ python -m venv ./pyinstaller_venv
 pip install pandas chardet pyinstaller
 
 4. Use that pyinstaller (in the Scripts folder) to create the executable.  This approach generated a 24MB file.
-
-Previously, in 2019, just running pyinstaller would fail because it did not find a numpy dll:
-18562 WARNING: lib not found: libopenblas.SVHFG5YE3RK3Z27NVFUDAPL2O3W6IMXW.gfortran-win32.dll dependency of f:\python38-32\venv_py38\lib\site-packages\numpy\core\_multiarray_umath.cp38-win32.pyd
-I think the right solution is to add the path containing that dll, but then I get an "Access is denied" error when pyinstaller processes that dll, even using an administrator command prompt.
-pyinstaller --onefile --noupx --paths F:\\Python38-32\\venv_py38\\Lib\\site-packages\\numpy\\.libs resume-randomizer.py
-Instead I directly bundled the dll into the executable.
-pyinstaller --onefile --noupx --add-data SOME_PATH\\libopenblas.SVHFG5YE3RK3Z27NVFUDAPL2O3W6IMXW.gfortran-win32.dll;. resume-randomizer.py
-For example:
-pyinstaller --onefile --nopux --add-data F:\\Python38-32\\venv_py38\\Lib\\site-packages\\numpy\\.libs\\libopenblas.SVHFG5YE3RK3Z27NVFUDAPL2O3W6IMXW.gfortran-win32.dll;. resume-randomizer.py
-That gave me a 28MB file.  I then got it down to 17MB by uninstalling Numpy and install/building a minimial distribution not linked to BLAS or MKL, e.g., numpy-1.16.6+vanilla-cp37-cp37m-win32.whl from https://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
