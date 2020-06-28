@@ -30,3 +30,39 @@ Instructions:
 
 3. Once one or more template files have been generated, use Python 3.6 or later to run the python script "resume-randomizer.py" to generate resumes.  Four sample template files are provided to demonstrate the use of the program: "example_cover_letter_template.rtf", "example_resume_template.rtf", "example_resume_template_with_fragments.rtf", and "example_cyrillic_template.rtf".  **Alternatively to using Python**, download a Windows executable of the resume-randomizer script in a zip file from the [NBER website](http://www.nber.org/resume-audit/).
 
+****************************************************************
+
+Creating a Windows executable:
+-------------
+
+To create an executable file,
+
+1. Install Anaconda Python.
+
+2. Ensure that resume-randomizer.py will run.
+
+3. conda install pyinstaller.
+
+4. pyinstaller --onefile resume-randomizer.py
+
+
+That will create an executable file that is larger than necessary, e.g., 300MB, so if it is important to reduce the size of the executable:
+1. Install a non-Anaconda Python.
+
+2. Create a new virtual environment and activate it.
+python -m venv ./pyinstaller_venv
+
+3. Install pandas, chardet, and pyinstaller.
+pip install pandas chardet pyinstaller
+
+4. Use that pyinstaller (in the Scripts folder) to create the executable.  This approach generated a 24MB file.
+
+Previously, in 2019, just running pyinstaller would fail because it did not find a numpy dll:
+18562 WARNING: lib not found: libopenblas.SVHFG5YE3RK3Z27NVFUDAPL2O3W6IMXW.gfortran-win32.dll dependency of f:\python38-32\venv_py38\lib\site-packages\numpy\core\_multiarray_umath.cp38-win32.pyd
+I think the right solution is to add the path containing that dll, but then I get an "Access is denied" error when pyinstaller processes that dll, even using an administrator command prompt.
+pyinstaller --onefile --noupx --paths F:\\Python38-32\\venv_py38\\Lib\\site-packages\\numpy\\.libs resume-randomizer.py
+Instead I directly bundled the dll into the executable.
+pyinstaller --onefile --noupx --add-data SOME_PATH\\libopenblas.SVHFG5YE3RK3Z27NVFUDAPL2O3W6IMXW.gfortran-win32.dll;. resume-randomizer.py
+For example:
+pyinstaller --onefile --nopux --add-data F:\\Python38-32\\venv_py38\\Lib\\site-packages\\numpy\\.libs\\libopenblas.SVHFG5YE3RK3Z27NVFUDAPL2O3W6IMXW.gfortran-win32.dll;. resume-randomizer.py
+That gave me a 28MB file.  I then got it down to 17MB by uninstalling Numpy and install/building a minimial distribution not linked to BLAS or MKL, e.g., numpy-1.16.6+vanilla-cp37-cp37m-win32.whl from https://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy

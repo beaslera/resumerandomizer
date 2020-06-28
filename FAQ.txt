@@ -6,7 +6,7 @@ Question 1) Does the Resume Randomizer work on non-Windows operating systems?
 Answer 1) The program should run on any modern OS (Windows, Linux, Mac, etc).
 
 Specifically, the executable file (resume-randomizer.exe, if you have it) will only run on Windows, but the source code (resume-randomizer.py) is provided alongside the executable and can be run via the Python programming environment.
-To do so, download and install Python version 3.6 (or later). I recommend using the Anaconda distribution because it comes bundled with many useful libraries.  https://www.anaconda.com/download/
+To do so, download and install Python version 3.6 or higher. I recommend using the Anaconda distribution because it comes bundled with many useful libraries.  https://www.anaconda.com/download/
 
 Once Python is installed and associated with .py file types you should be able to just run the resume-randomizer.py file from the GUI (i.e., double-click on it), or in the Anaconda command line type "python resume-randomizer.py".  This website has more info about using Python on a Mac. https://docs.python.org/3/using/mac.html ..either drag the .py file onto PythonLauncher, or use the finder Info window to set PythonLauncher as the default application to open the file (or any .py file) (and then double-click the py file).
 If it complains with errors about "ModuleNotFoundError: No module named 'numpy'" (or 'pandas' or whatever module), then on the command line type 'conda install numpy' (or whatever module).
@@ -19,7 +19,7 @@ The front-end GUI, resume-randomizer.html, is a webpage and should work on any O
 Question 2) How do I make the resumes look professional, with different fonts, font sizes, italics, images, backgrounds, etc?
 
 Answer 2) The resumes that the program creates are all plain-text files (even though the file ends in .doc).  So they're just letters, spaces, numbers, and symbols.  They don't have any formatting, otherwise they would be "rich text" instead of "plain text."
-We know of three approaches to get these random resumes with formatting:
+We know of three approaches to create random resumes with formatting:
 
 The first approach is to do it all manually, which is theoretically do-able, but would take too long with any reasonable number of resumes.
 

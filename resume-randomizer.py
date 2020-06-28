@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Version 32 12/19/2019: Fixes SyntaxWarning about "is" with a literal. Removed numpy import.
 # Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
 # Version 29 12/3/2017: Adds batch special text, e.g., %numberofbatches%. Program now ignores any lines below the end tag for the first (top-level) section, even if the first section is Random or Leaf.
@@ -48,15 +49,14 @@
 # Version 1 6/20/2007
 
 
-Version = 31
-Date = "August 25, 2019"
+Version = 32
+Date = "December 19, 2019"
 
 import distutils
 import glob
 import io
 import locale
 import math
-import numpy
 import os
 import pandas
 import re
@@ -440,7 +440,7 @@ def printCodebookToTempFile(inFile):
       print("", file=tempFile)
       if (myParent == ''): break  # We've come to the end of the template...the top level section was a Leaf.
 
-    if "*end_" in myText and myLabel is '1': # We've come to the end of the template
+    if "*end_" in myText and myLabel == '1': # We've come to the end of the template
       break
     theLine = inFile.readline()
     lineNumber += 1
