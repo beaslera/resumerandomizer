@@ -52,7 +52,6 @@
 Version = 32
 Date = "December 19, 2019"
 
-import distutils
 import glob
 import io
 import locale
@@ -65,6 +64,7 @@ import sys
 import tempfile
 from chardet.universaldetector import UniversalDetector
 from functools import reduce
+from packaging import version
 from random import randrange
 from random import random
 from random import shuffle
@@ -750,11 +750,14 @@ def createResumes(filename):
       txtChoicesFile.close()
       csvChoicesFile.writelines([globalCsvNames, "\n", globalCsvData])
       csvChoicesFile.close()
-      dfAllChoices = dfAllChoices.append(pandas.read_csv(io.StringIO('\n'.join([globalCsvNames, globalCsvData]))), ignore_index=True, sort=False)
+      dfGlobal = pandas.read_csv(io.StringIO('\n'.join([globalCsvNames,
+                                                        globalCsvData])))
+      dfAllChoices = pandas.concat([dfAllChoices, dfGlobal], ignore_index=True,
+                                   sort=False)
       print("Done with resume "+outputFilename)
 
   sortedColumns = dfAllChoices.columns.values.tolist()
-  sortedColumns.sort(key=distutils.version.LooseVersion)
+  sortedColumns.sort(key=version.parse)
   firstColumns = ['filename', 'batch', 'numberOfBatches', 'resume', 'numberOfResumesPerBatch', 'yearMonthDayHourMinuteSecond']
   newColumns = firstColumns + [col for col in sortedColumns if col not in firstColumns]
   dfAllChoices = dfAllChoices[newColumns]
