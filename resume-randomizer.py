@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Version 33 02/27/2022: Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file.
 # Version 32 12/19/2019: Fixes SyntaxWarning about "is" with a literal. Removed numpy import.
 # Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
@@ -48,13 +49,22 @@
 # Version 2 6/22/2007: Replaced all instances of the text "style" with "template".
 # Version 1 6/20/2007
 
+# TODO:
+# pylint
+# yapf
+# better docstrings, e.g., arguments
+# typing hints
+# unit tests
+# pathlib.Path
 
-Version = 32
-Date = "December 19, 2019"
+
+Version = 33
+Date = "February 27, 2022"
 
 import glob
 import io
 import locale
+import logging
 import math
 import os
 import pandas
@@ -87,7 +97,7 @@ globalCsvData = ''
 globalDictRangeChoices = {}
 globalInputEncodings = []
 globalOutputEncoding = None
-logging = False
+debugLogging = False
 
 
 def openInputFile(filename):
@@ -104,8 +114,9 @@ def openInputFile(filename):
     with open(filename, 'rt') as file:
       lines = file.readlines()
   except UnicodeError:
-    if (logging):
-      print("Unable to read file '" + filename + "' with the system default encoding '" + encoding + "'.")
+    logging.debug(
+      "Unable to read file %s with the system default encoding: %s.",
+      filename, encoding)
     for line in open(filename, 'rb'):
       detector.feed(line)
       if detector.done: break
@@ -116,12 +127,15 @@ def openInputFile(filename):
       with open(filename, 'rt', encoding=encoding) as file:
         lines = file.readlines()
     except UnicodeError:
-      print("Error! Unable to read file '" + filename + "' with either the system default encoding (" + locale.getpreferredencoding() + ") or the best guess (" + encoding + ").")
-      print("Try saving the file with a different encoding. Perhaps utf-8?")
+      logging.error(
+        'Error! Unable to read file %s with either the system default '
+        'encoding %s or the best guess %s.\n'
+        'Try saving the file with a different encoding. Perhaps utf-8?',
+        filename, locale.getpreferredencoding(), encoding)
       return False, None, 'FAILED_TO_OPEN'
 
-  if (logging):
-    print("\tSuccessfully opened file '" + filename + "' with the encoding '" + encoding + "'.")
+  logging.debug('\tSuccessfully opened file %s with the encoding: %s.',
+                filename, encoding)
   return True, open(filename, 'rt', encoding=encoding), encoding
 
 def frange(limit1, limit2 = None, increment = 1.):
@@ -200,18 +214,24 @@ def replaceFragments(inFile_strings):
     match_object = re.match(fragment_regex, inFile_strings[line_number])
     if match_object is not None:
       num_fragments_replaced += 1
-      print("Inserting file fragment, line #" + str(line_number) + ": " + inFile_strings[line_number].rstrip('\n'))
+      logging.info('Inserting file fragment, line #%d: %s', line_number,
+                   inFile_strings[line_number].rstrip('\n'))
       if not os.path.isfile(match_object.group(1)):
-        print("Error! Found the tag for a file fragment, but was unable to find the file it names.")
-        print("The tag is in line #" + str(line_number) + ": " + inFile_strings[line_number])
-        print("The tag names the file '" + match_object.group(1) + "'...is it in the same directory as this program?  Is the filename spelled correctly?")
+        logging.error(
+          'Error! Found the tag for a file fragment, but was unable to find '
+          'the file it names.\nThe tag is in line #%d: %s\nThe tag names the '
+          'file "%s"...is it in the same directory as this program?  '
+          'Is the filename spelled correctly?', line_number,
+          inFile_strings[line_number], match_object.group(1))
         return -62, '', ''
       success, fragmentFile, encoding = openInputFile(match_object.group(1))
       if (not success):
-        print("Error! Found the tag for a file fragment, but was unable to open the file it names.")
-        print("The tag is in line #" + str(line_number) + ": " + inFile_strings[line_number])
-        print("The tag names the file '" + match_object.group(1) + "'")
-        print("To avoid this error, convert all the input files to a specific text encoding, e.g., utf-8.")
+        logging.error(
+          'Error! Found the tag for a file fragment, but was unable to open '
+          'the file it names. The tag is in line #%d: %s\nThe tag names the '
+          'file "%s"\nTo avoid this error, convert all the input files to a '
+          'specific text encoding, e.g., utf-8.', line_number,
+          inFile_strings[line_number], match_object.group(1))
         return -63, '', ''
 
       global globalInputEncodings;
@@ -220,7 +240,11 @@ def replaceFragments(inFile_strings):
         fragment_strings = fragmentFile.readlines()
 
       if (fragment_strings[0].find("*fragment*") != 0):
-        print("\nWarning! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  The file is supposed to start with '*fragment*' on the first line...are you sure this is a fragment?\n")
+        logging.warning(
+          '\nWarning! While updating the file fragment "%s" for line #%d: %s\n'
+          'The file is supposed to start with "*fragment*" on the first '
+          'line...are you sure this is a fragment?\n', match_object.group(1),
+          line_number, inFile_strings[line_number])
       #remove lines between leaves
       outside_leaf = True
       for line_number_fragment in range(len(fragment_strings)-1, -1, -1):
@@ -248,7 +272,10 @@ def replaceFragments(inFile_strings):
           leaf_line_number = i
           break
       if not found_leaf:
-        print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program tried to find the enclosing *leaf* tag, but failed.")
+        logging.error(
+          'Error! While updating the file fragment "%s" for line #%d: %s\n'
+          'This program tried to find the enclosing *leaf* tag, but failed.',
+          match_object.group(1), line_number, inFile_strings[line_number])
         return -42, '', ''
         
       #march down to find the end_leaf, and determine how far down to remove
@@ -260,12 +287,22 @@ def replaceFragments(inFile_strings):
         if ("*end_leaf*" in myText):
           found_end_leaf = True
           if (first_added_label != temp[1]):
-            print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program tried to find the enclosing *leaf* and *end_leaf* tags, but they had different labels: " + first_added_label + " vs " + temp[1] + ".  Is the template correct above and below the special text that inserts the file fragment?")
+            logging.error(
+              'Error! While updating the file fragment "%s" for line #%d: %s\n'
+              'This program tried to find the enclosing *leaf* and *end_leaf* '
+              'tags, but they had different labels: %s vs %s.  Is the '
+              'template correct above and below the special text that inserts '
+              'the file fragment?', match_object.group(1), line_number,
+              inFile_strings[line_number], first_added_label, temp[1])
             return -43, '', ''
           end_leaf_line_number = i
           break
       if not found_leaf:
-        print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program tried to find the enclosing *end_leaf* tag, but failed.")
+        logging.error(
+          'Error! While updating the file fragment "%s" for line #%d: %s\n'
+          'This program tried to find the enclosing *end_leaf* tag, but '
+          'failed.', match_object.group(1), line_number,
+          inFile_strings[line_number])
         return -44, '', ''
 
       #now fix all the section IDs in the fragment_strings...and the %next% special text
@@ -297,7 +334,13 @@ def replaceFragments(inFile_strings):
           continue
         if ("%next%" in currentLine):
           if not found_parent_repeating:
-            print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program tried to replace the %next% special text, but the fragment does not appear after a repeating random section.  Inside a file fragment, the special text %next% will reference the most recent section that is both random and repeating.")
+            logging.error(
+              'Error! While updating the file fragment "%s" for line #%d: %s\n'
+              'This program tried to replace the %%next%% special text, but '
+              'the fragment does not appear after a repeating random section.  '
+              'Inside a file fragment, the special text %%next%% will reference '
+              'the most recent section that is both random and repeating.',
+              match_object.group(1), line_number, inFile_strings[line_number])
             return -45, '', ''
           fragment_strings[i] = fragment_strings[i].replace("%next%", "%next%"+nextLabel+"%")
           continue
@@ -315,7 +358,12 @@ def replaceFragments(inFile_strings):
           inFile_strings[i] = ' '.join(temp) + "\n"
           break
       if not found_parent:
-        print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program tried to correct the parent's number of subsections (top, opening tag) but did not find the parent's ID " + parentLabel)
+        logging.error(
+          'Error! While updating the file fragment "%s" for line #%d: %s\n\n'
+          "This program tried to correct the parent's number of subsections "
+          "(top, opening tag) but did not find the parent's ID: %s",
+          match_object.group(1), line_number, inFile_strings[line_number],
+          parentLabel)
         return -46, '', ''
 
       found_parent = False
@@ -328,7 +376,12 @@ def replaceFragments(inFile_strings):
           inFile_strings[i] = ' '.join(temp) + "\n"
           break
       if not found_parent:
-        print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program tried to correct the parent's number of subsections (bottom, closing tag) but did not find the parent's ID " + parentLabel)
+        logging.error(
+          'Error! While updating the file fragment "%s" for line #%d: %s\n'
+          "This program tried to correct the parent's number of subsections "
+          "(bottom, closing tag) but did not find the parent's ID: %s",
+          match_object.group(1), line_number, inFile_strings[line_number],
+          parentLabel)
         return -47, '', ''
 
       #work down through the inFile_strings and fix any sibling subsections
@@ -342,8 +395,13 @@ def replaceFragments(inFile_strings):
         myText = temp[0]
         if (myText in tags):
           if (len(temp) < 2):
-            print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program is scanning through each line in the template, and expects to find an ID as the second token on this line #" + i + ": " + currentLine)
-            print("but there are only " + len(temp) + " tokens on the line.")
+            logging.error(
+              'Error! While updating the file fragment "%s" for line #%d: %s\n'
+              'This program is scanning through each line in the template, and '
+              'expects to find an ID as the second token on this line '
+              '#%d: %s\nbut there are only %d tokens on the line.',
+              match_object.group(1), line_number, inFile_strings[line_number],
+              i, currentLine, len(temp))
             return -48, '', ''
           myLabel = temp[1]
           myLabel_strings = myLabel.split('-')
@@ -355,8 +413,14 @@ def replaceFragments(inFile_strings):
             inFile_strings[i] = ' '.join(temp) + "\n"
           if (myText == "*dependent*"):
             if (len(temp) < 5):
-              print("Error! While updating the file fragment '" + match_object.group(1) + "' for line #" + str(line_number) + ": " + inFile_strings[line_number] + "  This program is scanning through each line in the template, and expects to find the ID of the master section as the fifth token on this line #" + i + ": " + currentLine)
-              print("but there are only " + len(temp) + " tokens on the line.")
+              logging.error(
+                'Error! While updating the file fragment "%s" for line '
+                '#%d: %s\nThis program is scanning through each line in the '
+                'template, and expects to find the ID of the master section '
+                'as the fifth token on this line #%d: %s\n'
+                'but there are only %d tokens on the line.',
+                match_object.group(1), line_number,
+                inFile_strings[line_number], i, currentLine, len(temp))
               return -49, '', ''
             master = temp[4]
             master_strings = master.split('-')
@@ -392,8 +456,11 @@ def printCodebookToTempFile(inFile):
   try:
     tempFile = tempfile.TemporaryFile('w+t', encoding=globalOutputEncoding)
   except:
-    print("Error creating a temporary file to hold the codebook! Encoding is: ", globalOutputEncoding)
+    logging.error(
+      'Error creating a temporary file to hold the codebook! Encoding is: %s',
+      globalOutputEncoding)
     return -68, None
+  logging.debug('Saving codebook to temporary file.\n')
   inFile.seek(0)
   theLine = inFile.readline() #skip gui version
   theLine = inFile.readline()
@@ -406,21 +473,33 @@ def printCodebookToTempFile(inFile):
   lineNumber = 2
   while theLine: #readline returns an empty string when it reaches EOF
     currentLine = theLine
-    if logging: print(currentLine, end='')
     temp = currentLine.rstrip('\n').split(" ")
-    if logging: print(temp)
+    logging.debug('%s%s', currentLine, temp)
     if (len(temp)<2):
-      print("\nPortion of template (after inserting fragments), with line numbers:")
+      logging.error(
+        '\nPortion of template (after inserting fragments), with line numbers:')
       inFile.seek(0)
       theLine = inFile.readline()
       outputLineNumber = 1
       while theLine:
         if (outputLineNumber + 7 > lineNumber) and (lineNumber + 7 > outputLineNumber):
-          sys.stdout.write(str(outputLineNumber) + ":" + theLine)
+          logging.error('%d:%s', outputLineNumber, theLine)
         theLine = inFile.readline()
         outputLineNumber += 1
-      print("\nError!  While reading through the template to print the codebook, the software expected a start tag (e.g., *random* 3-2 4) on line number " + str(lineNumber) + " (see print out with line numbers above) but got: "+currentLine)
-      print("Make sure the lines (in the template file) that contain start tags for Random and Constant and Dependent sections specify the correct number of subsections listed after the label (following the second space in the line), that each end tag is directly followed by either a start tag or an end tag, that there are no blank lines in the template file outside of Leaf sections, and that all fragments use the start/end tag texts '*leaf*' and '*end_leaf*' exactly and with no spaces on the same lines. Also look at the surrounding lines to see if a fragment does not have the correct text for a start/end tag.")
+      logging.error(
+        '\nError!  While reading through the template to print the codebook, '
+        'the software expected a start tag (e.g., *random* 3-2 4) on line '
+        'number %d (see print out with line numbers above) but got: %s\n'
+        'Make sure the lines (in the template file) that contain start tags '
+        'for Random and Constant and Dependent sections specify the correct '
+        'number of subsections listed after the label (following the second '
+        'space in the line), that each end tag is directly followed by either '
+        'a start tag or an end tag, that there are no blank lines in the '
+        'template file outside of Leaf sections, and that all fragments use '
+        'the start/end tag texts "*leaf*" and "*end_leaf*" exactly and with '
+        'no spaces on the same lines. Also look at the surrounding lines to '
+        'see if a fragment does not have the correct text for a start/end '
+        'tag.', lineNumber, currentLine)
       return -38, tempFile
       
     myText = temp[0]
@@ -430,14 +509,13 @@ def printCodebookToTempFile(inFile):
       myParent = '-'.join(splitLabel[:-1])
       parentString = "v" + myParent.replace("-", "_")
       if (parentString == "v"): parentString = "-"
-      print(parentString + "\t" + splitLabel[-1] + "\t", file=tempFile, end='')
-      if logging: print("leaf text: \t", end='')
+      print(parentString + '\t' + splitLabel[-1] + '\t', file=tempFile, end='')
+      logging.debug('leaf text:')
       retval = writeLeaf(inFile, tempFile, currentLine, myLabel, startString, endString, currentString, currentPlusIntervalString, makeCodeBook)
       if (retval < 1):
         return retval
       lineNumber += retval
-      if logging: print("")
-      print("", file=tempFile)
+      print('', file=tempFile)
       if (myParent == ''): break  # We've come to the end of the template...the top level section was a Leaf.
 
     if "*end_" in myText and myLabel == '1': # We've come to the end of the template
@@ -452,7 +530,7 @@ def printCodebook(inFile, filename):
   """
   Prints the codebook, if it does not exist or has changed.
   """
-  print("Checking whether codebook already exists.")
+  logging.info('Checking whether codebook already exists.')
 
   returnVal, tempFile = printCodebookToTempFile(inFile)
   if returnVal < 0: return returnVal
@@ -461,15 +539,16 @@ def printCodebook(inFile, filename):
   codebookPrefix = filename + "_codebook-"
   prevCodebookNames = glob.glob(codebookPrefix + "*.xls")
   saveCodebook = True
+  logging.info('\n')
   if (len(prevCodebookNames) == 0):
-    print("No previous codebook was found in the folder.")
+    logging.info('No previous codebook was found in the folder.')
   else:
     latestCodebookName = max(prevCodebookNames, key=os.path.getmtime)
     success, latestCodebook, encoding = openInputFile(latestCodebookName)
     if (not success):
-      print()
-      print("Warning, failed to compare previous codebook with new codebook!  Saving new codebook even though it might have the same content.")
-      print(e)
+      logging.warning(
+        '\nWarning, failed to compare previous codebook with new codebook!  '
+        'Saving new codebook even though it might have the same content.')
     else:
       saveCodebook = False
       tempFile.flush()
@@ -493,10 +572,11 @@ def printCodebook(inFile, filename):
           aLine = latestCodebook.readline()
       latestCodebook.close()
       if saveCodebook:
-        print()
-        print("Warning! The template does not match the latest codebook file: " + latestCodebookName)
-        print("One (or both) of the template or the codebook have been modified.")
-        print("A new codebook file will be created for the files being generated now.")
+        logging.warning(
+          '\nWarning! The template does not match the latest codebook file: %s\n',
+          'One (or both) of the template or the codebook have been modified.\n'
+          'A new codebook file will be created for the files being generated '
+          'now.', latestCodebookName)
         input('Press return to continue')
 
   if saveCodebook:
@@ -506,50 +586,50 @@ def printCodebook(inFile, filename):
       if not os.path.isfile(codebookFilename):
         break
       codebookNumber += 1
-    print("Saving new codebook in a file named " + codebookFilename)
+    logging.info('Saving new codebook in a file named %s', codebookFilename)
     try:
       codebookFile = open(codebookFilename, 'wt', encoding=globalOutputEncoding)
     except IOError as e:
-      print()
-      print("Error creating codebook file named " + codebookFilename)
-      print(e)
+      logging.error('\nError creating codebook file named %s\n%s',
+                    codebookFilename, e)
       return -52
     tempFile.seek(0)
     try:
       shutil.copyfileobj(tempFile, codebookFile)
     except UnicodeError:
-      print()
-      print("Error! Failed to copy the codebook into the file due to encoding issues.")
-      print(e)
+      logging.error(
+        '\nError! Failed to copy the codebook into the file due to encoding '
+        'issues.\n%s', e)
       return -66
       
     tempFile.close()
     codebookFile.close()
-    print("Done saving the codebook.")
-    print()
+    logging.info('Done saving the codebook.\n')
   else:
-    print("The codebook for this template already exists in " + latestCodebookName)
+    logging.info('The codebook for this template already exists in %s\n',
+                 latestCodebookName)
 
   return 1
 
 
-def createResumes(filename):
+def createResumes(file_name, current_time):
   """
   Creates resumes from the template filename.
   """
-  success, inFile, encoding = openInputFile(filename)
+  success, inFile, encoding = openInputFile(file_name)
   if (not success):
-    print()
-    print("Error! Failed to open the template file!")
+    logging.error('\nError! Failed to open the template file!')
     return -67
   global globalInputEncodings;
-  globalInputEncodings = [(filename, encoding)]
+  globalInputEncodings = [(file_name, encoding)]
   matchedPair = False
   guiVersion = inFile.readline()
   guiVersion_text = " ".join(guiVersion.split(" ")[1:4])
   if (guiVersion_text.rstrip("\n") != "gui version number"):
-    print("Error! The file selected as a template " + filename + " does not have the correct text starting its first line: '" + str(Version) + " gui version number'")
-    print("Instead, the first line is '" + guiVersion + "'")
+    logging.error(
+      'Error! The file selected as a template %s does not have the correct '
+      'text starting its first line: "%s gui version number"\n'
+      'Instead, the first line is "%s"', file_name, Version, guiVersion)
     return -53
 
   for line in inFile:
@@ -561,10 +641,10 @@ def createResumes(filename):
     while True:
       try: numDifferent = int(input('This template file contains random sections for Matched "pairs".  How many files should be matched in each batch? (0 to cancel) '))
       except ValueError:
-        print("Please enter a positive integer.")
+        logging.warning('Please enter a positive integer.')
         continue
       if numDifferent < 1:
-        print("Canceled")
+        logging.warning('Canceled')
         return -1
       break
 
@@ -576,21 +656,20 @@ def createResumes(filename):
         numToMake = int(input('How many resumes should be generated? (0 to cancel) '))
       break
     except ValueError:
-      print("Please enter an integer.")
+      logging.warning('Please enter an integer.')
       continue
   if (numToMake < 1):
-    print("Canceled")
+    logging.warning('Canceled')
     return -1
 
-  print()
-  myTime = ""
-  withTime = input('Would you like the date & time in each resume filename? (Y/n, anything else to cancel) ')
+  time_in_file_name = ""
+  withTime = input('\nWould you like the date & time in each resume filename? (Y/n, anything else to cancel) ')
   if (not withTime) or (withTime.lower() == 'y') or (withTime.lower() == 'yes'):
-    myTime = strftime("_%Y-%m-%d-%H-%M-%S")
+    time_in_file_name = '_' + current_time
   elif (withTime.lower() != 'n') and (withTime.lower() != 'no'):
-    print("Canceled")
+    logging.warning('Canceled')
     return -1
-  print()
+  logging.info('')
 
   inFile.seek(0)
   inFile_strings = inFile.readlines()
@@ -601,7 +680,10 @@ def createResumes(filename):
     num_fragments += replaced_fragments
     if ((num_fragments > 1000) and not have_printed_warning):
       have_printed_warning = True
-      print("Warning! This program has so far replaced " + str(num_fragments) + " file fragments. Verify that the file fragments do not contain %file% special texts that reference each other, causing an infinite loop.")
+      logging.warning(
+        'Warning! This program has so far replaced %d file fragments. Verify '
+        'that the file fragments do not contain %%file%% special texts that '
+        'reference each other, causing an infinite loop.', num_fragments)
       input("Press return to continue")
     retval, inFile_strings, replaced_fragments = replaceFragments(inFile_strings)
     if (retval < 0):
@@ -611,19 +693,27 @@ def createResumes(filename):
   [filenames, encodings] = list(zip(*globalInputEncodings))
   if (num_fragments == 0):
     globalOutputEncoding = encodings[0]
-    print()
+    logging.info('')
     if (globalOutputEncoding != locale.getpreferredencoding()):
-      print("Saving the codebook and all other outputs in an encoding (" + globalOutputEncoding + ") that is not the system default (" + locale.getpreferredencoding() + ") because the template was encoded in (" + globalOutputEncoding + ").")
-    elif (logging):
-      print("Saving the codebook and all other outputs using system preferred encoding (" + globalOutputEncoding + ")")
+      logging.info(
+        'Saving the codebook and all other outputs in an encoding (%s) that '
+        'is not the system default (%s) because the template was encoded in '
+        '(%s).', globalOutputEncoding, locale.getpreferredencoding(),
+        globalOutputEncoding)
+    else:
+      logging.debug(
+        'Saving the codebook and all other outputs using system preferred '
+        'encoding (%s).', globalOutputEncoding)
   else:
     inFile.close()
     for encoding in encodings:
       try:
         inFile = tempfile.TemporaryFile('w+t', encoding=encoding)
       except:
-        print()
-        print("Error! After inserting file fragments into the template, this program failed to create a temporary file to store the new template.")
+        logging.error(
+          '\nError! After inserting file fragments into the template, this '
+          'program failed to create a temporary file to store the new '
+          'template.')
         return -50
     
       success = True
@@ -638,34 +728,43 @@ def createResumes(filename):
 
     #If none of the encodings work, try utf-8.
     if (not success):
-      print("Warning! Failed to encode the codebook with any of the encodings used for the template and any fragment files:")
-      print(globalInputEncodings)
-      print("Going to try utf-8.")
+      logging.warning(
+        'Warning! Failed to encode the codebook with any of the encodings '
+        'used for the template and any fragment files: %s. Going to try utf-8.',
+        globalInputEncodings)
       globalOutputEncoding = 'utf-8'
       try:
         inFile = tempfile.TemporaryFile('w+t', encoding=globalOutputEncoding)
       except:
-        print()
-        print("Error creating a utf-8 temporary file to hold the codebook!")
+        logging.error(
+          '\nError creating a utf-8 temporary file to hold the codebook!')
         return -64
     
       try:
         inFile.writelines(inFile_strings)
       except UnicodeError:
-        print()
-        print("Error! Failed to encode the codebook with any encoding (including utf-8).")
-        print("If using fragment files, try converting all of the input files (i.e., the template and any fragments) into the same encoding.")
+        logging.error(
+          '\nError! Failed to encode the codebook with any encoding (including '
+          'utf-8).\nIf using fragment files, try converting all of the input '
+          'files (i.e., the template and any fragments) into the same '
+          'encoding.')
         return -65
 
     if (globalOutputEncoding != locale.getpreferredencoding()):
-      print("Saving the codebook and all other outputs in an encoding (" + globalOutputEncoding + ") that is not the system default (" + locale.getpreferredencoding() + ") because the template and/or fragment files used a different encoding.")
-    elif (logging):
-      print("Saving the codebook and all other outputs using system preferred encoding (" + globalOutputEncoding + ")")
+      logging.info(
+        'Saving the codebook and all other outputs in an encoding (%s) that '
+        'is not the system default (%s) because the template and/or fragment '
+        'files used a different encoding.', globalOutputEncoding,
+        locale.getpreferredencoding())
+    else:
+      logging.debug(
+        'Saving the codebook and all other outputs using system preferred '
+        'encoding (%s).', globalOutputEncoding)
 
   inFile.seek(0)
   inFile_strings = inFile.readlines()  # This looks extraneous...the strings haven't changed since they were loaded, they were just written to a TemporaryFile.
     
-  returnVal = printCodebook(inFile, filename)
+  returnVal = printCodebook(inFile, file_name)
   if returnVal < 0:
     return returnVal
 
@@ -687,7 +786,7 @@ def createResumes(filename):
   resumeCountOverBatches = 0;
   dfAllChoices = pandas.DataFrame()
   for batchOfResumes in range(numToMake):
-    filenames = createFilenames(filename, myTime, len(str(numToMake)), numDifferent, matchedPair, batchOfResumes+1)
+    filenames = createFilenames(file_name, time_in_file_name, len(str(numToMake)), numDifferent, matchedPair, batchOfResumes+1)
     dictionaryMatchSame = {}
     dictionaryMatchDifferent = {}
     dictionaryMatchOnlyOneEver = {}
@@ -704,12 +803,8 @@ def createResumes(filename):
       globalResumeCountOverBatchesPaddedString = globalResumeCountOverBatchesString.zfill(len(globalTotalNumberOfResumesString))
       saveChoicesFile = open(saveChoicesFilename, 'wt', encoding=globalOutputEncoding)
       print(outputFilename +" is the text file that these choices created.", file=saveChoicesFile)
-      print(filename+" is the template file being used.", file=saveChoicesFile)
-      tempTime = myTime
-      if not tempTime:
-        tempTime = strftime("%Y-%m-%d-%H-%M-%S")
-      tempTime = tempTime.lstrip('_')
-      print(tempTime+" is the current time as year, month, day, hour (out of 24), minute, second.", file=saveChoicesFile)
+      print(file_name+" is the template file being used.", file=saveChoicesFile)
+      print(current_time+" is the current time as year, month, day, hour (out of 24), minute, second.", file=saveChoicesFile)
       print(str(Version)+" is the version of the Python program.", file=saveChoicesFile)
       print(guiVersion.rstrip('\n'), file=saveChoicesFile)
       print(str(numDifferent) + " is the number of text files being Matched.", file=saveChoicesFile)
@@ -723,8 +818,12 @@ def createResumes(filename):
       globalCsvData = outputFilename
       if "," in globalCsvData:
         globalCsvData.replace(",", "")
-        print("\nWarning! the filename contained a comma, which is a delimiter in csv (comma-separated-variables) files.  So in the csv file (and only inside the csv file), the comma has been removed from the filename.\n\n")
-      globalCsvData += "," + globalBatchString + "," + globalNumberOfBatchesString + "," + globalThisResumeNumberString + "," + globalNumberOfResumesPerBatchString + "," + tempTime
+        logging.warning(
+          '\nWarning! the filename contained a comma, which is a delimiter in '
+          'csv (comma-separated-variables) files.  So in the csv file (and '
+          'only inside the csv file), the comma has been removed from the '
+          'filename.\n\n')
+      globalCsvData += "," + globalBatchString + "," + globalNumberOfBatchesString + "," + globalThisResumeNumberString + "," + globalNumberOfResumesPerBatchString + "," + current_time
       outputFile = open(outputFilename, 'wt', encoding=globalOutputEncoding)
       #reset the store/recall variables for each file
       global globalMemory
@@ -735,7 +834,10 @@ def createResumes(filename):
       inFile.readline() #skip gui version
       retval = recursiveGenerate(inFile, outputFile, saveChoicesFile, txtChoicesFile, '', {}, {}, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, '', '', '', '', {})
       if (retval >= 0) and (len(globalDelayedWrite) > 0):
-        print("Error! A Leaf contains special text that refers to the 'next' value of a repeating section, but the section to which it refers is not repeating:\n" + globalDelayedWrite[0])
+        logging.error(
+          'Error! A Leaf contains special text that refers to the "next" '
+          'value of a repeating section, but the section to which it refers '
+          'is not repeating:\n%s', globalDelayedWrite[0])
         retval = -40
       outputFile.close()
       if (retval<0):
@@ -754,15 +856,15 @@ def createResumes(filename):
                                                         globalCsvData])))
       dfAllChoices = pandas.concat([dfAllChoices, dfGlobal], ignore_index=True,
                                    sort=False)
-      print("Done with resume "+outputFilename)
+      logging.info('Done with resume %s', outputFilename)
 
   sortedColumns = dfAllChoices.columns.values.tolist()
   sortedColumns.sort(key=version.parse)
   firstColumns = ['filename', 'batch', 'numberOfBatches', 'resume', 'numberOfResumesPerBatch', 'yearMonthDayHourMinuteSecond']
   newColumns = firstColumns + [col for col in sortedColumns if col not in firstColumns]
   dfAllChoices = dfAllChoices[newColumns]
-  collatedFilename = filename[:-4] + '_collated_' + tempTime + '.csv'
-  print("Saving the collated data in a file named ", collatedFilename)
+  collatedFilename = file_name[:-4] + '_collated_' + current_time + '.csv'
+  logging.info('Saving the collated data in a file named %s', collatedFilename)
   dfAllChoices.to_csv(collatedFilename, index=False)
   inFile.close()
   return 1
@@ -773,25 +875,43 @@ def skipElement(inFile, currentLine):
   """
   theLine = inFile.readline()
   if (theLine == ''):
-    print("\nError!  The skipElement function reached the end of the file unexpectedly.")
-    print("The program chose which subsection to follow for the Random or Dependent section on this line: "+currentLine)
-    print("The program was trying to move down in the template file to that subsection, but did not find it before reaching the end of the file.  Make sure the line above has the correct number of subsections listed after the label (following the second space in the line).  Make sure each subsection has a correct start tag (e.g., *leaf* 1-3-2) and end tag (e.g., *end_leaf* 1-3-2) in the template file.")
+    logging.error(
+      '\nError!  The skipElement function reached the end of the file '
+      'unexpectedly.\nThe program chose which subsection to follow for the '
+      'Random or Dependent section on this line: %s\nThe program was trying '
+      'to move down in the template file to that subsection, but did not find '
+      'it before reaching the end of the file.  Make sure the line above has '
+      'the correct number of subsections listed after the label (following '
+      'the second space in the line).  Make sure each subsection has a '
+      'correct start tag (e.g., *leaf* 1-3-2) and end tag (e.g., '
+      '*end_leaf* 1-3-2) in the template file.', currentLine)
     return -2
   currentLine = theLine
   splitLine = currentLine.split(" ")
   if (len(splitLine)<2):
-    print("\nError!  The skipElement function expected a start tag (e.g., *random* 1-3-2 4) but got: "+currentLine)
-    print("The program chose which subsection to follow for a Random or Dependent section, and was trying to move down in the template file to that subsection, but the template was not correctly formed.")
-    print("Make sure each start tag is followed by the correct end tag, that each end tag is directly followed by either a start tag or an end tag, and that there are no blank lines in the template file outside of Leaf sections.")
+    logging.error(
+      '\nError!  The skipElement function expected a start tag (e.g., '
+      '*random* 1-3-2 4) but got: %s\nThe program chose which subsection to '
+      'follow for a Random or Dependent section, and was trying to move down '
+      'in the template file to that subsection, but the template was not '
+      'correctly formed.\nMake sure each start tag is followed by the correct '
+      'end tag, that each end tag is directly followed by either a start tag '
+      'or an end tag, and that there are no blank lines in the template file '
+      'outside of Leaf sections.', currentLine)
     return -3
   endTag = "*end_"+splitLine[0][1:]+" "+splitLine[1].rstrip('\n')+" "
   next_line = ''
   while (not endTag in next_line):
     next_line = inFile.readline()
     if not next_line: #readline returns an empty string when it reaches EOF
-      print("\nError!  The skipElement function reached the end of the file unexpectedly while looking for the stop tag for: "+currentLine)
-      print("The program chose which subsection to follow for a Random or Dependent section, and was trying to move down in the template file to that subsection, but the template was not correctly formed.")
-      print("Make sure that the stop tag exists in the template file (e.g., *end_random* 1-3-2)")
+      logging.error(
+        '\nError!  The skipElement function reached the end of the file '
+        'unexpectedly while looking for the stop tag for: %s\nThe program '
+        'chose which subsection to follow for a Random or Dependent section, '
+        'and was trying to move down in the template file to that subsection, '
+        'but the template was not correctly formed.\nMake sure that the stop '
+        'tag exists in the template file (e.g., *end_random* 1-3-2)',
+        currentLine)
       return -4
     next_line = next_line.rstrip('\n')+' '
   return 1
@@ -803,14 +923,28 @@ def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariab
   
   theLine = inFile.readline()
   if not theLine: #readline returns an empty string when it reaches EOF
-    print("\nError!  The recursiveGenerate function was looking for a new section when it reached the end of the file unexpectedly.  It expected to find a start tag (e.g., *random* 1-3-1 7).  Make sure the lines (in the template file) that contain start tags for Random and Constant and Dependent sections specify the correct number of subsections listed after the label (following the second space in the line).  Why did the function not find an end tag as the last line in the file?")
+    logging.error(
+      '\nError!  The recursiveGenerate function was looking for a new section '
+      'when it reached the end of the file unexpectedly.  It expected to find '
+      'a start tag (e.g., *random* 1-3-1 7).\nMake sure the lines (in the '
+      'template file) that contain start tags for Random and Constant and '
+      'Dependent sections specify the correct number of subsections listed '
+      'after the label (following the second space in the line).  Why did the '
+      'function not find an end tag as the last line in the file?')
     return -5
   currentLine = theLine
-  if logging: print(currentLine, end='')
+  logging.debug(currentLine)
   temp = currentLine.rstrip('\n').split(" ")
   if (len(temp)<2):
-    print("\nError!  The recursiveGenerate function was looking for a new section and expected a start tag (e.g., *random* 3-2 4) but got: "+currentLine)
-    print("Make sure the lines (in the template file) that contain start tags for Random and Constant and Dependent sections specify the correct number of subsections listed after the label (following the second space in the line), that each end tag is directly followed by either a start tag or an end tag, and that there are no blank lines in the template file outside of Leaf sections.")
+    logging.error(
+      '\nError!  The recursiveGenerate function was looking for a new section '
+      'and expected a start tag (e.g., *random* 3-2 4) but got: %s\nMake sure '
+      'the lines (in the template file) that contain start tags for Random '
+      'and Constant and Dependent sections specify the correct number of '
+      'subsections listed after the label (following the second space in the '
+      'line), that each end tag is directly followed by either a start tag or '
+      'an end tag, and that there are no blank lines in the template file '
+      'outside of Leaf sections.', currentLine)
     return -6
   myText = temp[0]
   myLabel = temp[1]
@@ -819,13 +953,23 @@ def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariab
   myNumChoices = ""
   if (("*random*" in myText) or ("*constant*" in myText) or ("*dependent*" in myText)):
     if (len(temp) < 3):
-      print("\nError!  The recursiveGenerate function found a non-Leaf start tag, but the start tag did not contain the number of subsections: "+currentLine)
-      print("The start tags for Random and Constant and Dependent sections should list the type of the section, then a space, then the label for the section, then a space, then the number of the subsections.  (e.g., *random* 1-1-5-6 8)")
+      logging.error(
+        '\nError!  The recursiveGenerate function found a non-Leaf start tag, '
+        'but the start tag did not contain the number of subsections: %s\n'
+        'The start tags for Random and Constant and Dependent sections should '
+        'list the type of the section, then a space, then the label for the '
+        'section, then a space, then the number of the subsections.  (e.g., '
+        '*random* 1-1-5-6 8)', currentLine)
       return -7
     temp[2] = temp[2].rstrip("\n")
     if temp[2].isdigit() == False:
-      print("\nError!  The recursiveGenerate function found a non-Leaf start tag, for which the number of subsections should be the second item, but on this line that is not a number: "+currentLine)
-      print("The start tags for Random and Constant and Dependent sections should list the type of the section, then a space, then the label for the section, then a space, then the number of the subsections.  (e.g., *random* 1-1-5-6 8)")
+      logging.error(
+        '\nError!  The recursiveGenerate function found a non-Leaf start tag, '
+        'for which the number of subsections should be the second item, but '
+        'on this line that is not a number: %s\nThe start tags for Random and '
+        'Constant and Dependent sections should list the type of the section, '
+        'then a space, then the label for the section, then a space, then the '
+        'number of the subsections (e.g., *random* 1-1-5-6 8).', currentLine)
       return -8
     myNumChoices = int(temp[2])
 
@@ -842,8 +986,13 @@ def recursiveGenerate(inFile, outFile, saveChoicesFile, txtChoicesFile, myVariab
   if "*constant*" in myText:
     return writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoicesFile, txtChoicesFile, myVariableName, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice)
 
-  print("\nError!  The recursiveGenerate function found a start tag that it does not recognize: "+currentLine)
-  print("The recognizable start tags are *leaf*, *random*, *dependent*, and *constant*.  If the line above is not supposed to be a start tag, make sure in the template file it is not directly after a start tag for a Random or Constant or Dependent section, and that it does not directly follow an end tag.")
+  logging.error(
+    '\nError!  The recursiveGenerate function found a start tag that it does '
+    'not recognize: %s\nThe recognizable start tags are *leaf*, *random*, '
+    '*dependent*, and *constant*.  If the line above is not supposed to be a '
+    'start tag, make sure in the template file it is not directly after a '
+    'start tag for a Random or Constant or Dependent section, and that it '
+    'does not directly follow an end tag.', currentLine)
   return -9
 
 
@@ -855,8 +1004,8 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
   theLine = inFile.readline()
   lineNumber = 1
   if not theLine: #readline returns an empty string when it reaches EOF
-    print("\nError!  The last line in the file is " + currentLine)
-    print("So there is no *end_leaf* for that tag.")
+    logging.error('\nError!  The last line in the file is %s\nSo there is no '
+                  '*end_leaf* for that tag.', currentLine)
     return -10
   firstRun = True
   global globalThisResumeNumberString;
@@ -878,13 +1027,15 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
         (('%current%' in theLine) and (currentString == '')) or
         (('%currentPlusInterval%' in theLine) and (currentPlusIntervalString == '')) or
         (('%next%' in theLine) and (startString == ''))):
-      print("\nError!  In section " + myLabel + ", this line contains a special text (%start%, %end%, %current%, %currentPlusInterval%, or %next%), but it is not inside a Random section that Repeats:\n" + theLine)
+      logging.error(
+        '\nError!  In section %s, this line contains a special text '
+        '(%%start%%, %%end%%, %%current%%, %%currentPlusInterval%%, or '
+        '%%next%%), but it is not inside a Random section that Repeats:\n%s',
+        myLabel, theLine)
       return -29
     tempString = myLineBreak + theLine.rstrip("\n")
     if (makeCodeBook):
-      if (logging):
-        print(tempString.replace("\n", " ").replace("\t", " "), end='')
-
+      logging.debug('%s', tempString.replace("\n", " ").replace("\t", " "))
       print(tempString.replace("\n", " ").replace("\t", " "), file=outFile, end='')
     else:
       tempString = tempString.replace('%start%',startString).replace('%end%',endString).replace('%current%',currentString).replace('%currentPlusInterval%',currentPlusIntervalString).replace('%batch%', globalBatchString).replace('%batchpadded%', globalBatchPaddedString).replace('%numberofbatches%', globalNumberOfBatchesString).replace('%resume%', globalThisResumeNumberString).replace('%resumepadded%', globalThisResumeNumberPaddedString).replace('%numberofresumesperbatch%', globalNumberOfResumesPerBatchString).replace('%resumecountoverbatches%', globalResumeCountOverBatchesString).replace('%resumecountoverbatchespadded%', globalResumeCountOverBatchesPaddedString).replace('%totalnumberofresumes%', globalTotalNumberOfResumesString)
@@ -894,10 +1045,9 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
         for temp_index in range(len(tempString_strings)-3, -1, -1):
           # must check length of the list because if the line only contains store commands they will all be stripped out, and the list will be empty on the last iteration (when temp_index is 0)
           if ((len(tempString_strings) > temp_index) and (tempString_strings[temp_index] == 'store')):
-            if ('\\n' in tempString_strings[temp_index+2]): print("!!!!!!!!!!!!!!!!!!!!!We have newline!")
             tempString_strings[temp_index+2] = tempString_strings[temp_index+2].replace('\\n', '\n').replace('\\t', '\t')
             globalMemory[tempString_strings[temp_index+1]] = tempString_strings[temp_index+2]
-            if logging: print("%store% special text.  ", tempString_strings[temp_index+1], " --> ", tempString_strings[temp_index+2])
+            logging.debug('%%store%% special text.  %s --> %s', tempString_strings[temp_index+1], tempString_strings[temp_index+2])
             #if the store special text comes at the beginning or end of the line, it will leave an empty string when splitting, which will make a '%' when joining
             start_index = temp_index
             if ((temp_index == 1) and (tempString_strings[0] == '')):
@@ -913,9 +1063,13 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
           if tempString_strings[temp_index] == 'recall':
             try:
               tempString = '%'.join(tempString_strings[:temp_index]) + globalMemory[tempString_strings[temp_index+1]] + '%'.join(tempString_strings[temp_index+2:])
-              if logging: print("%recall% special text.  ", tempString_strings[temp_index+1], " --> ", globalMemory[tempString_strings[temp_index+1]])
+              logging.debug('%%recall%% special text.  %s --> %s', tempString_strings[temp_index+1], globalMemory[tempString_strings[temp_index+1]])
             except KeyError:
-              print("\nError!  In section " + myLabel + ", this line contains a special text (%recall%), but the variable being recalled '" + tempString_strings[temp_index+1] + "' has not been stored (using %store%):\n" + theLine)
+              logging.error(
+                '\nError!  In section %s, this line contains a special text '
+                '(%%recall%%), but the variable being recalled "%s" has not '
+                'been stored (using %%store%%):\n%s', myLabel,
+                tempString_strings[temp_index+1], theLine)
               return -34
             tempString_strings = tempString.split('%')
         tempString = '%'.join(tempString_strings)
@@ -925,8 +1079,10 @@ def writeLeaf(inFile, outFile, currentLine, myLabel, startString, endString, cur
     theLine = inFile.readline()
     lineNumber += 1
     if not theLine: #readline returns an empty string when it reaches EOF
-      print("\nError!  Could not find *end_leaf* " + myLabel)
-      print("The program was processing a Leaf section and never found the end tag for that section.  Make sure the end tag is in the file.")
+      logging.error(
+        '\nError!  Could not find *end_leaf* %s\nThe program was processing a '
+        'Leaf section and never found the end tag for that section.  Make '
+        'sure the end tag is in the file.', myLabel)
       return -11
 
   return lineNumber
@@ -942,12 +1098,21 @@ def writeConstant(myNumChoices, myLabel, currentLine, inFile, outFile, saveChoic
     if (retval < 0): return retval
   theLine = inFile.readline()
   if not theLine: #readline returns an empty string when it reaches EOF
-    print("\nError!  Reached the end of the file looking for the *end_constant* corresponding to this start tag "+ currentLine)
-    print("The program was processing a Constant section and had finished going through the subsections but in doing so it got to the end of the file.  Make sure the end tag is in the correct place and that the Constant section has the correct number of subsections.")
+    logging.error(
+      '\nError!  Reached the end of the file looking for the *end_constant* '
+      'corresponding to this start tag %s\nThe program was processing a '
+      'Constant section and had finished going through the subsections but in '
+      'doing so it got to the end of the file.  Make sure the end tag is in '
+      'the correct place and that the Constant section has the correct number '
+      'of subsections.', currentLine)
     return -12
   if ("*end_constant*" + myLabel+" " in theLine):
-    print("\nError!  While processing a Constant section, and after processing the subsections, the next line was not *end_constant* corresponding to this start tag "+ currentLine)
-    print("Make sure the end tag is in the correct location and that the Constant section has the correct number of subsections.")
+    logging.error(
+      '\nError!  While processing a Constant section, and after processing the '
+      'subsections, the next line was not *end_constant* corresponding to '
+      'this start tag %s\nMake sure the end tag is in the correct location '
+      'and that the Constant section has the correct number of subsections.',
+      currentLine)
     return -13
   return 1
 
@@ -983,7 +1148,9 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
           repeatStart = float(temp[countSplit+1])
           repeatIndicesAreIntegers = False
         except ValueError:
-          print("\nError!  For Repeating section " + myLabel + ", the start value '" + temp[countSplit+1] + "' is neither an integer nor a decimal.")
+          logging.error(
+            '\nError!  For Repeating section %s, the start value "%s" is '
+            'neither an integer nor a decimal.', myLabel, temp[countSplit + 1])
           return -30
       try:
         repeatEnd = int(temp[countSplit+2])
@@ -992,7 +1159,9 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
           repeatEnd = float(temp[countSplit+2])
           repeatIndicesAreIntegers = False
         except ValueError:
-          print("\nError!  For Repeating section " + myLabel + ", the end value '" + temp[countSplit+2] + "' is neither an integer nor a decimal.")
+          logging.error(
+            '\nError!  For Repeating section "%s", the end value "%s" is '
+            'neither an integer nor a decimal.', myLabel, temp[countSplit + 2])
           return -31
       try:
         repeatInterval = int(temp[countSplit+3])
@@ -1001,10 +1170,15 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
           repeatInterval = float(temp[countSplit+3])
           repeatIndicesAreIntegers = False
         except ValueError:
-          print("\nError!  For Repeating section " + myLabel + ", the interval value '" + temp[countSplit+3] + "' is neither an integer nor a decimal.")
+          logging.error(
+            '\nError!  For Repeating section "%s", the interval value "%s" is '
+            'neither an integer nor a decimal.', myLabel, temp[countSplit+3])
           return -32
       if (repeatInterval == 0):
-        print("\nError!  For Repeating section " + myLabel + ", the interval value '" + temp[countSplit+3] + "' equals zero.  It must be a non-zero integer or decimal.")
+        logging.error(
+          '\nError!  For Repeating section "%s", the interval value "%s" '
+          'equals zero.  It must be a non-zero integer or decimal.', myLabel,
+          temp[countSplit+3])
         return -61
     elif temp[countSplit] == "*repeatSame*": repeatSame = True
     elif temp[countSplit] == "*repeatNever*": repeatNever = True
@@ -1017,77 +1191,117 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
       try:
         maxSelectionsPerSubPointInteger = int(temp[countSplit+1])
       except ValueError:
-        print("\nError! This Random start tag: " + currentLine)
-        print("specifies Match Max Selections Per Sub Point to be something other than a number.  Fix the template file by removing the tag or following it with an integer greater than zero.")
+        logging.error(
+          '\nError! This Random start tag: %s\nspecifies Match Max Selections '
+          'Per Sub Point to be something other than a number.  Fix the '
+          'template file by removing the tag or following it with an integer '
+          'greater than zero.', currentLine)
         return -56
       if (maxSelectionsPerSubPointInteger <= 0):
-        print("\nError! This Random start tag: " + currentLine)
-        print("specifies Match Max Selections Per Sub Point to be a number less than or equal to zero, which is invalid.  Fix the template file by removing the tag or using an integer greater than zero.")
+        logging.error(
+          '\nError! This Random start tag: %s\nspecifies Match Max Selections '
+          'Per Sub Point to be a number less than or equal to zero, which is '
+          'invalid.  Fix the template file by removing the tag or using an '
+          'integer greater than zero.', currentLine)
         return -57
     elif (temp[countSplit] == "*nonUniformFirstSubPoint*"):
       nonUniformFirstSubPoint = True
       try:
         nonUniformFirstSubPointPercentage = float(temp[countSplit+1])
       except ValueError:
-        print("\nError! This Random start tag: " + currentLine)
-        print("specifies the non-uniform first sub-point percentage to be something other than a number.  Fix the template file by removing the tag or following it with a decimal number.")
+        logging.error(
+          '\nError! This Random start tag: %s\nspecifies the non-uniform first '
+          'sub-point percentage to be something other than a number.  Fix the '
+          'template file by removing the tag or following it with a decimal '
+          'number.', currentLine)
         return -58
     elif (temp[countSplit] == "*minimumNumberOfEntries*") and (len(temp) > countSplit+1):
       try:
         minimumNumberOfEntries = int(temp[countSplit+1])
       except ValueError:
-        print("\nError! This Random start tag: " + currentLine)
-        print("specifies the minimum number of entries to be something other than a number.  Fix the template file by removing the tag or following it with an integer.")
+        logging.error(
+          '\nError! This Random start tag: %s\nspecifies the minimum number of '
+          'entries to be something other than a number.  Fix the template '
+          'file by removing the tag or following it with an integer.',
+          currentLine)
         return -59
     elif (temp[countSplit] == "*maximumNumberOfEntries*") and (len(temp) > countSplit+1):
       try:
         maximumNumberOfEntries = int(temp[countSplit+1])
       except ValueError:
-        print("\nError! This Random start tag: " + currentLine)
-        print("specifies the maximum number of entries to be something other than a number.  Fix the template file by removing the tag or following it with an integer.")
+        logging.error(
+          '\nError! This Random start tag: %s\nspecifies the maximum number of '
+          'entries to be something other than a number.  Fix the template '
+          'file by removing the tag or following it with an integer.',
+          currentLine)
         return -60
     elif temp[countSplit] == "*matchSame*": matchSame = True
     elif temp[countSplit] == "*matchDifferent*": matchDifferent = True
     elif temp[countSplit] == "*matchOnlyOneEver*": matchOnlyOneEver = True
   if matchOnlyOneEver and matchSame:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Match Only One Ever and Match Same, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Match Only One Ever '
+      'and Match Same, but the two constraints are exclusive.  Fix the '
+      'template file by removing one of the two constraints.', currentLine)
     return -35
   if matchDifferent and matchSame:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Match Different and Match Same, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Match Different and '
+      'Match Same, but the two constraints are exclusive.  Fix the template '
+      'file by removing one of the two constraints.', currentLine)
     return -20
   if matchMaxSelectionsPerSubPoint and matchSame:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Match Max Selections Per Sub-Point and Match Same, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Match Max Selections '
+      'Per Sub-Point and Match Same, but the two constraints are exclusive.  '
+      'Fix the template file by removing one of the two constraints.',
+      currentLine)
     return -54
   if matchMaxSelectionsPerSubPoint and matchDifferent:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Match Max Selections Per Sub-Point and Match Different, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Match Max Selections '
+      'Per Sub-Point and Match Different, but the two constraints are '
+      'exclusive.  Fix the template file by removing one of the two '
+      'constraints.', currentLine)
     return -55
   if matchMaxSelectionsPerSubPoint and matchOnlyOneEver:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Match Max Selections Per Sub-Point and Match Only One Ever.  Ignoring Match Max Selections Per Sub-Point because it is redundant.")
+    logging.warning(
+      '\nWarning! This Random start tag: %s\nspecifies both Match Max '
+      'Selections Per Sub-Point and Match Only One Ever.  Ignoring Match Max '
+      'Selections Per Sub-Point because it is redundant.', currentLine)
     matchMaxSelectionsPerSubPoint = False
   if matchOnlyOneEver and matchDifferent:
-    print("\nWarning! This Random start tag: " + currentLine)
-    print("specifies both Match Only One Ever and Match Different.  Ignoring Match Different because it is redundant.")
+    logging.warning(
+      '\nWarning! This Random start tag: %s\nspecifies both Match Only One '
+      'Ever and Match Different.  Ignoring Match Different because it is '
+      'redundant.', currentLine)
     matchDifferent = False
   if repeatSame and repeatNever:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Repeat Same and Repeat Never, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Repeat Same and '
+      'Repeat Never, but the two constraints are exclusive.  Fix the template '
+      'file by removing one of the two constraints.', currentLine)
     return -21
   if repeatSame and repeatDifferentDouble:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Repeat Same and Repeat Different Double (aka non-uniform chance for immediate repeat), but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Repeat Same and '
+      'Repeat Different Double (aka non-uniform chance for immediate repeat), '
+      'but the two constraints are exclusive.  Fix the template file by '
+      'removing one of the two constraints.', currentLine)
     return -22
   if repeatNever and repeatDifferentDouble:
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Repeat Never and Repeat Different Double (aka non-uniform chance for immediate repeat), but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Repeat Never and '
+      'Repeat Different Double (aka non-uniform chance for immediate repeat), '
+      'but the two constraints are exclusive.  Fix the template file by '
+      'removing one of the two constraints.', currentLine)
     return -23
   if repeatSame and (minimumNumberOfEntries > 1):
-    print("\nError! This Random start tag: " + currentLine)
-    print("specifies both Repeat Same and a minimum number of entries greater than 1, but the two constraints are exclusive.  Fix the template file by removing one of the two constraints.")
+    logging.error(
+      '\nError! This Random start tag: %s\nspecifies both Repeat Same and a '
+      'minimum number of entries greater than 1, but the two constraints are '
+      'exclusive.  Fix the template file by removing one of the two '
+      'constraints.', currentLine)
     return -37
 
   global globalDictRangeChoices
@@ -1096,8 +1310,12 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
     if repeatIndicesAreIntegers: myRange = range(repeatStart, repeatEnd, repeatInterval)
     else: myRange = frange(repeatStart, repeatEnd, repeatInterval)
     if len(myRange)<1:
-      print("\nError! Invalid start/end/interval values for repetition on this start tag: "+ currentLine)
-      print("Make sure that the interval (the third number after *repeat*) is not zero, and that the start value (the first number after *repeat*) plus some multiple of the interval equals or is past the end value (the second value after *repeat*).")
+      logging.error(
+        '\nError! Invalid start/end/interval values for repetition on this '
+        'start tag: %s\nMake sure that the interval (the third number after '
+        '*repeat*) is not zero, and that the start value (the first number '
+        'after *repeat*) plus some multiple of the interval equals or is past '
+        'the end value (the second value after *repeat*).', currentLine)
       return -25
     if (minimumNumberOfEntries > 0) or (maximumNumberOfEntries > 0):
       globalDictRangeChoices[myLabel] = [len(myRange), 0, 0];
@@ -1107,7 +1325,8 @@ def writeRandom(temp, inFile, myVariableName, myNumChoices, currentLine, saveCho
       endString = str(repeatEnd)
       currentString = str(myIteration)
       currentPlusIntervalString = str(myIteration+repeatInterval)
-      if logging: print("In WriteRandom, repeating.  currentString: " + currentString)
+      logging.debug('In WriteRandom, repeating.  currentString: %s',
+                    currentString)
       retval = enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName+'-iter'+str(myIteration), myNumChoices, currentLine, saveChoicesFile, txtChoicesFile, inFile, outFile, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, startString, endString, currentString, currentPlusIntervalString, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries)
       if retval < 0: return retval
     if len(globalDelayedWrite)>0: replaceNextString(endString, outFile, myLabel)
@@ -1125,12 +1344,21 @@ def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, save
   if masterLabel in dictionaryLastChoice:
     chosenSubelement = dictionaryLastChoice[masterLabel]
   else:
-    print("\nError! This Dependent section " + myLabel + " depends upon the section labeled " + masterLabel + " which has not yet made a choice.\nThe current line is: " + currentLine)
-    print("Make sure this Dependent section depends upon a Random section, and make sure that Random section must always be visited before this Dependent section.\n")
+    logging.error(
+      '\nError! This Dependent section %s depends upon the section labeled %s '
+      'which has not yet made a choice.\nThe current line is: %s\nMake sure '
+      'this Dependent section depends upon a Random section, and make sure '
+      'that Random section must always be visited before this Dependent '
+      'section.', myLabel, masterLabel, currentLine)
     return -26
   if chosenSubelement >= myNumChoices:
-    print("\nError! This Dependent section does not have enough subsections.  The section it depends on chose element #" + chosenSubelement + " but this Dependent section only has #" + myNumChoices + " subsections.\nThe current line is: " + currentLine)
-    print("\nMake sure this Dependent section depends upon the correct Random section, make sure that the Random section and the Dependent section have the same number of subsections.")
+    logging.error(
+      '\nError! This Dependent section does not have enough subsections.  The '
+      'section it depends on chose element #%d but this Dependent section '
+      'only has %d subsections.\nThe current line is: %s\nMake sure this '
+      'Dependent section depends upon the correct Random section, make sure '
+      'that the Random section and the Dependent section have the same number '
+      'of subsections.', chosenSubelement, myNumChoices, currentLine)
     return -28
 
   print(currentLine, file=saveChoicesFile, end='')
@@ -1148,8 +1376,13 @@ def writeDependent(temp, inFile, myVariableName, myNumChoices, currentLine, save
   while (not "*end_dependent* "+myLabel+" " in next_line):
     next_line = inFile.readline()
     if not next_line: #readline returns an empty string when it reaches EOF
-      print("\nError!  Could not find *end_dependent* for the Dependent section with the label: " + myLabel)
-      print("The program finished following a subsection for this Dependent section but was unable to find this Dependent section's end tag.  Make sure the end tag is in the file.  Make sure the Random and Constant and Dependent sections have the correct number of subsections.")
+      logging.error(
+        '\nError!  Could not find *end_dependent* for the Dependent section '
+        'with the label: %s\nThe program finished following a subsection for '
+        'this Dependent section but was unable to find this Dependent '
+        "section's end tag.  Make sure the end tag is in the file.  Make sure "
+        'the Random and Constant and Dependent sections have the correct '
+        'number of subsections.', myLabel)
       return -27
     next_line = next_line.rstrip('\n')+' '
   return 1
@@ -1172,7 +1405,7 @@ def nonUniformShuffle(freeToChoose, nonUniformFirstSubPoint, nonUniformFirstSubP
   """
   Shuffle the list, but obey any nonUniformFirstSubPoint percentage.
   """
-  if logging: print('freeToChoose: ' + str(freeToChoose))
+  logging.debug('freeToChoose: %s', freeToChoose)
   shuffle(freeToChoose)
   if (nonUniformFirstSubPoint and (0 in freeToChoose)):
     freeToChoose.remove(0)
@@ -1188,12 +1421,35 @@ def getChoiceForRepeatSame(myLabel, dictionaryRepeatSame, freeToChoose, myVariab
   if myLabel in dictionaryRepeatSame:
     if dictionaryRepeatSame[myLabel] in freeToChoose: chosenSubelement = dictionaryRepeatSame[myLabel]
     else:
-      print("\nError! Cannot satisfy both Repeat Same (aka 'Same when repeat') and either Match Different or Match Only One Ever.")
-      print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
-      print("\nAny given text file was supposed to choose the same choice each time it encountered this Random section (so this random section, or one of its parents must Repeat).  All of the matched text files were supposed to choose different choices on the same iteration of the repetition.  The program was not able to satisfy both constraints.  The most likely cause is that not all of the matched files encountered this Random section on the same iteration of a parent Random section.")
-      print("\nFor example, if the first text file chose the first choice on the first iteration, then the second file did not encounter this Random section (due to a different choice in a Random parent), then the first file did not encounter this Random section in the second iteration, and finally the second file chose the first choice on the second iteration (a valid choice since it has not yet chosen anything and the other file did not choose on this repetition), then on any future repetition if they both encounter this Random section they will not be able to satisfy both constraints.")
-      print("\nThis error may not always occur because the files may choose differently by chance, or because they choose the same but never encounter this Random section on the same iteration.")
-      print("To alleviate this problem: remove one of the constraints (Repeat Same, Match Different, or Match Only One Ever), add more choices, reduce the number of matched files, or make the parent Random section Match Same so that all matched files encounter this Random section on the same iterations.")
+      logging.error(
+        '\nError! Cannot satisfy both Repeat Same (aka "Same when repeat") and '
+        'either Match Different or Match Only One Ever.\nThe label for this '
+        'Random section: %s.\nThe "key" which contains the label and also a '
+        'concatenated list of the iterations for any ongoing repetitions: %s\n'
+        '\nAny given text file was supposed to choose the same choice each '
+        'time it encountered this Random section (so this random section, or '
+        'one of its parents must Repeat).  All of the matched text files were '
+        'supposed to choose different choices on the same iteration of the '
+        'repetition.  The program was not able to satisfy both constraints.  '
+        'The most likely cause is that not all of the matched files '
+        'encountered this Random section on the same iteration of a parent '
+        'Random section.\n\nFor example, if the first text file chose the '
+        'first choice on the first iteration, then the second file did not '
+        'encounter this Random section (due to a different choice in a Random '
+        'parent), then the first file did not encounter this Random section '
+        'in the second iteration, and finally the second file chose the first '
+        'choice on the second iteration (a valid choice since it has not yet '
+        'chosen anything and the other file did not choose on this '
+        'repetition), then on any future repetition if they both encounter '
+        'this Random section they will not be able to satisfy both '
+        'constraints.\n\nThis error may not always occur because the files '
+        'may choose differently by chance, or because they choose the same '
+        'but never encounter this Random section on the same iteration.\n'
+        'To alleviate this problem: remove one of the constraints (Repeat '
+        'Same, Match Different, or Match Only One Ever), add more choices, '
+        'reduce the number of matched files, or make the parent Random '
+        'section Match Same so that all matched files encounter this Random '
+        'section on the same iterations.', myLabel, myVariableName)
       return -14
   else: chosenSubelement = freeToChoose[0]
   return chosenSubelement
@@ -1216,19 +1472,53 @@ def getChoiceForMatchSame(repeatSame, myLabel, myVariableName, dictionaryMatchSa
   """
   
   if repeatSame and myLabel in dictionaryRepeatSame and dictionaryMatchSame[myVariableName] != dictionaryRepeatSame[myLabel]:
-    print("\nError! Cannot satisfy both Match Same and Repeat Same (aka 'Same when repeat').")
-    print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
-    print("\nThis Random section or one of its parents repeats.  This section is supposed to always choose the same result as it has previously chosen, and is supposed to choose the same result as the matched text files chose on the same iteration of the repetition.  The program was not able to satisfy both requirements.  Most likely this random section is within another random section, and that parent random section does not use Match Same.  So this section does not run on the same iterations for all the matched files.  In the first iteration it did run for this file, no previous file had chosen this section, and this file chose differently than the others.  Then in a future iteration, this file and a previous one both ran, putting the two requirements in conflict.")
-    print("\nTo solve this problem, make the parent repeating section Match Same, or remove one of the two restrictions.  Alternatively, if the current template file is run again there is a chance that the text files will choose similarly and this error will not appear.")
+    logging.error(
+      '\nError! Cannot satisfy both Match Same and Repeat Same (aka '
+      '"Same when repeat").\nThe label for this Random section: %s.\n'
+      'The "key" which contains the label and also a concatenated list of the '
+      'iterations for any ongoing repetitions: %s\n\nThis Random section or '
+      'one of its parents repeats.  This section is supposed to always choose '
+      'the same result as it has previously chosen, and is supposed to choose '
+      'the same result as the matched text files chose on the same iteration '
+      'of the repetition.  The program was not able to satisfy both '
+      'requirements.  Most likely this random section is within another '
+      'random section, and that parent random section does not use Match '
+      'Same.  So this section does not run on the same iterations for all the '
+      'matched files.  In the first iteration it did run for this file, no '
+      'previous file had chosen this section, and this file chose differently '
+      'than the others.  Then in a future iteration, this file and a previous '
+      'one both ran, putting the two requirements in conflict.\n\nTo solve '
+      'this problem, make the parent repeating section Match Same, or remove '
+      'one of the two restrictions.  Alternatively, if the current template '
+      'file is run again there is a chance that the text files will choose '
+      'similarly and this error will not appear.', myLabel, myVariableName)
     return -16
   if repeatNever and myLabel in dictionaryRepeatNever and dictionaryMatchSame[myVariableName] in dictionaryRepeatNever[myLabel]:
-    print("\nError! Cannot satisfy both Match Same and Repeat Never (aka 'Always different when repeat').")
-    print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
-    print("\nThis Random section or one of its parents repeats.  This section is supposed to always choose the same result as the matched text files chose on the same iteration of the repetition, and this text file is not supposed to contain duplicates. The program was not able to satisfy both requirements. Most likely this random section is within another random section, and that parent random section does not use Match Same.  So this section does not run on the same iterations for all the matched files.  This text file made a choice in an iteration that no previous file chose during.  Then in a later iteration, the previous files made that same choice and now this file cannot satisfy both requirements.")
-    print("\nTo solve this problem, make the parent repeating section Match Same, or remove one of the two restrictions.  Alternatively, if the current template file is run again there may be a chance that the text files will choose similarly and this error will not appear.")
+    logging.error(
+      '\nError! Cannot satisfy both Match Same and Repeat Never (aka '
+      '"Always different when repeat".\nThe label for this Random section: %s'
+      '\nThe "key" which contains the label and also a concatenated list of '
+      'the iterations for any ongoing repetitions: %s\n\nThis Random section '
+      'or one of its parents repeats.  This section is supposed to always '
+      'choose the same result as the matched text files chose on the same '
+      'iteration of the repetition, and this text file is not supposed to '
+      'contain duplicates. The program was not able to satisfy both '
+      'requirements. Most likely this random section is within another '
+      'random section, and that parent random section does not use Match '
+      'Same.  So this section does not run on the same iterations for all the '
+      'matched files.  This text file made a choice in an iteration that no '
+      'previous file chose during.  Then in a later iteration, the previous '
+      'files made that same choice and now this file cannot satisfy both '
+      'requirements.\n\nTo solve this problem, make the parent repeating '
+      'section Match Same, or remove one of the two restrictions.  '
+      'Alternatively, if the current template file is run again there may be '
+      'a chance that the text files will choose similarly and this error will '
+      'not appear.', myLabel, myVariableName)
     return -17
   chosenSubelement = dictionaryMatchSame[myVariableName]
-  if logging: print('This section is MatchSame, and a previous resume in the batch has already chosen: ', chosenSubelement)
+  logging.debug(
+    'MatchSame, and a previous resume in the batch has already chosen: %d',
+    chosenSubelement)
   return chosenSubelement
   
 def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferentDouble, repeatDifferentDoublePercentage, nonUniformFirstSubPoint, nonUniformFirstSubPointPercentage, matchMaxSelectionsPerSubPoint, maxSelectionsPerSubPointInteger, matchSame, matchDifferent, matchOnlyOneEver, myVariableName, myNumChoices, myLabel, dictionaryRepeatSame, dictionaryRepeatNever, dictionaryMatchSame, dictionaryMatchDifferent, dictionaryMatchOnlyOneEver, dictionaryMaxSelectionsPerSubPoint, dictionaryLastChoice, minimumNumberOfEntries, maximumNumberOfEntries):
@@ -1240,20 +1530,36 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
   if matchDifferent and myVariableName in dictionaryMatchDifferent:
     [alreadyTaken, freeToChoose] = intersection(dictionaryMatchDifferent[myVariableName], freeToChoose)
     if len(freeToChoose) < 1:
-      print("\nError! Disobeying Match Different.  Not enough choices.")
-      print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
-      print("\nThis random section or one of its parents repeats.  This section is not supposed to have the same result as any of the text files it is matched with for the same iteration in the repetition.  The program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections).")
+      logging.error(
+        '\nError! Disobeying Match Different.  Not enough choices.\nThe label '
+        'for this Random section: %s\nThe "key" which contains the label and '
+        'also a concatenated list of the iterations for any ongoing '
+        'repetitions: %s\n\nThis random section or one of its parents '
+        'repeats.  This section is not supposed to have the same result as '
+        'any of the text files it is matched with for the same iteration in '
+        'the repetition.  The program was not able to satisfy that '
+        'requirement.  Add more choices, reduce the number of matched files, '
+        'or reduce the number of repetitions (check for nested repeating '
+        'sections).', myLabel, myVariableName)
       return [-19, -1]
-    if logging: print("matchDifferent.  freeToChoose: ", freeToChoose)
+    logging.debug('matchDifferent.  freeToChoose: %s', freeToChoose)
 
   if matchMaxSelectionsPerSubPoint and (myLabel in dictionaryMaxSelectionsPerSubPoint):
     [reachedMax, freeToChoose] = intersection([i for i, j in enumerate(dictionaryMaxSelectionsPerSubPoint[myLabel]) if j >= maxSelectionsPerSubPointInteger], freeToChoose)
     if len(freeToChoose) < 1:
-      print("\nError! Disobeying Max Selections Per Sub-Point.  Not enough choices.")
-      print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
-      print("\nThis random section is not supposed to select the same sub-point more than " + str(maxSelectionsPerSubPointInteger) + " times throughout an entire batch. The Program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections).")
+      logging.error(
+        '\nError! Disobeying Max Selections Per Sub-Point.  Not enough '
+        'choices.\nThe label for this Random section: %s\nThe "key" which '
+        'contains the label and also a concatenated list of the iterations for '
+        'any ongoing repetitions: %s\n\nThis random section is not supposed to '
+        'select the same sub-point more than %d times throughout an entire '
+        'batch. The Program was not able to satisfy that requirement.  Add '
+        'more choices, reduce the number of matched files, or reduce the '
+        'number of repetitions (check for nested repeating sections).',
+        myLabel, myVariableName, maxSelectionsPerSubPointInteger)
       return [-39, -1]
-    if logging: print("matchMaxSelectionsPerSubPoint.  freeToChoose: ", freeToChoose)
+    logging.debug('matchMaxSelectionsPerSubPoint.  freeToChoose: %s',
+                  freeToChoose)
 
   global globalThisResumeNumber;
   if matchOnlyOneEver and myLabel in dictionaryMatchOnlyOneEver:
@@ -1262,11 +1568,20 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
       if (aResumeNumber != globalThisResumeNumber):
         [alreadyTaken, freeToChoose] = intersection(dictOfResumeToChoices[aResumeNumber], freeToChoose)
     if len(freeToChoose) < 1:
-      print("\nError! Disobeying Match One Only Ever (possibly combined with Match Different and/or Max Selections Per Sub-Point).  Not enough choices.")
-      print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName) + ". The resume number: " + str(globalThisResumeNumber))
-      print("\nThis random section or one of its parents repeats.  This section is not supposed to have the same result as any of the text files it is matched with.  The program was not able to satisfy that requirement.  Add more choices, reduce the number of matched files, or reduce the number of repetitions (check for nested repeating sections).")
+      logging.erorr(
+        '\nError! Disobeying Match One Only Ever (possibly combined with Match '
+        'Different and/or Max Selections Per Sub-Point).  Not enough choices.\n'
+        'The label for this Random section: %s\nThe "key" which contains the '
+        'label and also a concatenated list of the iterations for any ongoing '
+        'repetitions: %s\nThe resume number: %d\n\nThis random section or one '
+        'of its parents repeats.  This section is not supposed to have the '
+        'same result as any of the text files it is matched with.  The '
+        'program was not able to satisfy that requirement.  Add more choices, '
+        'reduce the number of matched files, or reduce the number of '
+        'repetitions (check for nested repeating sections).', myLabel,
+        myVariableName, globalThisResumeNumber)
       return [-36, -1]
-    if logging: print("matchOnlyOneEver.  freeToChoose: ", freeToChoose)
+    logging.debug('matchOnlyOneEver.  freeToChoose: %s', freeToChoose)
 
   if myLabel in dictionaryRepeatNever:
     ###If matchDifferent and repeatNever, we would need to precompute all results to prevent a locking situation (or test for inevitable locking), but then what about nested repeats?
@@ -1276,14 +1591,31 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
     if len(freeToChoose) < 1:
       [alreadyTaken, freeToChoose] = intersection(dictionaryRepeatNever[myLabel], list(range(myNumChoices)))
       if len(freeToChoose) < 1:
-        print("\nError! Disobeying Repeat Never (aka 'Always different when repeat'), which says that a section should not be chosen more than once in a single text file.  To alleviate this problem: add more choices or reduce the number of repetitions.")
-        print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
+        logging.error(
+          '\nError! Disobeying Repeat Never (aka "Always different when repeat"'
+          '), which says that a section should not be chosen more than once '
+          'in a single text file.  To alleviate this problem: add more '
+          'choices or reduce the number of repetitions.\nThe label for this '
+          'Random section: %s\nThe "key" which contains the label and also a '
+          'concatenated list of the iterations for any ongoing repetitions: %s',
+          myLabel, myVariableName)
         return [-24, -1]
       else:
-        print("\nError!  Failed to obey both Repeat Never (aka 'Always different when repeat') and Match Different, Match Only One Ever, and/or Max Selections Per Sub-Point.  This section or one of its parents repeats, and this section is supposed to always choose a different result than any chosen previously for this text file or any other.  It failed.  To alleviate this problem: add more choices, reduce the number of matched files, or reduce the number of repetitions.  This error may occur even if there exists a set of permutations of the choices that obeys both restrictions.")
-        print("The label for this Random section: " + str(myLabel) + ". The 'key' which contains the label and also a concatenated list of the iterations for any ongoing repetitions: " + str(myVariableName))
+        logging.error(
+          '\nError!  Failed to obey both Repeat Never (aka "Always different '
+          'when repeat") and Match Different, Match Only One Ever, and/or '
+          'Max Selections Per Sub-Point.  This section or one of its parents '
+          'repeats, and this section is supposed to always choose a different '
+          'result than any chosen previously for this text file or any other.  '
+          'It failed.  To alleviate this problem: add more choices, reduce the '
+          'number of matched files, or reduce the number of repetitions.  This '
+          'error may occur even if there exists a set of permutations of the '
+          'choices that obeys both restrictions.\nThe label for this Random '
+          'section: %s\nThe "key" which contains the label and also a '
+          'concatenated list of the iterations for any ongoing repetitions: %s',
+          myLabel, myVariableName)
         return [-15, -1]
-    if logging: print("repeatNever.  freeToChoose: ", freeToChoose)
+    logging.debug('repeatNever.  freeToChoose: %s', freeToChoose)
 
   #deal with minimum and maximum numbers of different subelements
   global globalDictRangeChoices
@@ -1304,7 +1636,7 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
   elif repeatDifferentDouble and myLabel in dictionaryLastChoice: chosenSubelement = getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastChoice, myLabel, freeToChoose)
   else: chosenSubelement = freeToChoose[0]
 
-  if logging: print("getChosenSubelement chose: ", chosenSubelement)
+  logging.debug('getChosenSubelement chose: %s', chosenSubelement)
   if chosenSubelement < 0: return [chosenSubelement, -1]
 
   if repeatSame: dictionaryRepeatSame[myLabel] = chosenSubelement
@@ -1369,8 +1701,12 @@ def enterRandomSection(repeatSame, repeatNever, repeatNoDoubles, repeatDifferent
   while (not "*end_random* "+myLabel+" " in next_line):
     next_line = inFile.readline()
     if not next_line: #readline returns an empty string when it reaches EOF
-      print("\nError!  Could not find *end_random* for the Random section with the label: " + myLabel)
-      print("The program finished following a subsection for this Random section but was unable to find this Random section's end tag.  Make sure the end tag is in the file.  Make sure the Random and Constant sections have the correct number of subsections.")
+      logging.error(
+        '\nError!  Could not find *end_random* for the Random section with the '
+        'label: %s\nThe program finished following a subsection for this '
+        "Random section but was unable to find this Random section's end tag.  "
+        'Make sure the end tag is in the file.  Make sure the Random and '
+        'Constant sections have the correct number of subsections.', myLabel)
       return -18
     next_line = next_line.rstrip('\n')+' '
   return 1
@@ -1381,7 +1717,6 @@ def replaceNextString(currentString, outFile, myLabel):
   
   If we do not yet know the next value, just store the text in globalDelayedWrite.
   """
-  
   global globalDelayedWrite
   tempList = []
   readyToPrint = True
@@ -1395,58 +1730,80 @@ def replaceNextString(currentString, outFile, myLabel):
     globalDelayedWrite = []
   else: globalDelayedWrite = tempList 
 
-def isTemplateFile(filename):
+def isTemplateFile(file_name):
   """
   Check if filename is a valid template.
   """
-
-  if logging: print("Going to try and open " + filename + " to check if it is a template file.")
-  success, inFile, encoding = openInputFile(filename)
+  logging.debug('Going to try and open %s to check if it is a template file.',
+                file_name)
+  success, inFile, encoding = openInputFile(file_name)
   if (not success):
-    print("Warning! Failed to open the file named '" + filename + "'.")
+    logging.warning('Warning! Failed to open the file named "%s"', file_name)
     return False
   with inFile:
     first_line = inFile.readline()
     if first_line.find("*fragment*") == 0:
       return False
   return True
-  
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.INFO)
+logging.basicConfig(format='%(message)s',
+                    level=logging.DEBUG,
+                    handlers=[stdout_handler])
 retval = 1;
 while retval >= 0:
-  print("\n\nResumeRandomizer program, version " + str(Version) + ", last updated " + Date + ".\n")
+  logging.info('\nResumeRandomizer program, version %d, last updated %s.\n',
+               Version, Date)
   templateFileNames = glob.glob('*.rtf')
   templateFileNames = [x for x in templateFileNames if os.path.isfile(x)]
   if templateFileNames is None or len(templateFileNames)<1:
-    print("No .rtf file available...where are the resume template files?  They should be in the same folder as this program.")
+    logging.warning(
+      'No .rtf file available...where are the resume template files?  They '
+      'should be in the same folder as this program.')
     input("Press return to quit")
     break
 
   templateFileNames = [x for x in templateFileNames if isTemplateFile(x)]
   if templateFileNames is None or len(templateFileNames)<1:
-    print("There are .rtf files in the folder, but they do not appear to be template files...where are the resume template files?  They should be in the same folder as this program.")
+    logging.warning(
+      'There are .rtf files in the folder, but they do not appear to be '
+      'template files...where are the resume template files?  They should be '
+      'in the same folder as this program.')
     input("Press return to quit")
     break
 
-  print("Available templates:")
-  for i in range(len(templateFileNames)): print(str(i+1) + ") " + templateFileNames[i])
+  logging.info('Available templates:%s\n',
+               ''.join([f'\n{i+1}) {templateFileNames[i]}'
+                        for i in range(len(templateFileNames))]))
   try:
     whichTemplate = int(input('Which template?  (0 to quit) '))
   except ValueError:
     input("Please enter an integer between 0 and " + str(len(templateFileNames)) + ". Press return.")
     continue
   if (whichTemplate < 1):
-    print("Bye")
+    logging.info('Bye')
     break
   if (whichTemplate > len(templateFileNames)):
     input("That number is too large.  Press return")
     continue
   whichTemplate-=1
-  print("Using template "+ templateFileNames[whichTemplate])
-  print()
-  retval = createResumes(templateFileNames[whichTemplate])
+  file_name = templateFileNames[whichTemplate]
+
+  # Start logger
+  current_time = strftime("_%Y-%m-%d-%H-%M-%S")
+  file_handler = logging.FileHandler(file_name + current_time + '.log',
+                                     encoding='utf8')
+  file_handler.setLevel(logging.DEBUG)
+  logging.getLogger().addHandler(file_handler)
+  logging.info("Using template "+ file_name)
+  logging.info('')
+  retval = createResumes(file_name, current_time)
+  logging.getLogger().removeHandler(file_handler)
 
 if retval < -1:
-  print()
-  print("ResumeRandomizer has exited with a return code of " + str(retval) + ".")
-  print("There may have been an error.  If you cannot fix the problem, or need help, contact one of the authors.")
+  logging.warning(
+    '\nResumeRandomizer has exited with a return code of %d.\nThere may have '
+    'been an error.  If you cannot fix the problem, or need help, contact one '
+    'of the authors.', retval)
   input("Press return to quit")

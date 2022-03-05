@@ -77,7 +77,7 @@
 <SCRIPT type="text/javascript">
 //If you can read this on your web browser, javascript is not working.  Fix javascript on your web browser.
 
-var versionNumber = 32;
+var versionNumber = 33;
 var template = new Array();
 
 // countId is an Array that contains the number of subpoints at each level.
@@ -1325,7 +1325,7 @@ function bodyOnloadFunction() {
 <div id="content">
 <div id="leftSide">
 
-<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 32</span></h1>
+<h1>Resume Randomizer Template Generator.  <span style="font-size:50%">Version 33</span></h1>
 <p>This webpage assists users in generating templates for the Resume Randomizer program.
 <br>Firefox, Chrome, Safari, Internet Explorer, and Microsoft Edge should all work.  Regardless of browser, you may be required to enable "active content" or "allow blocked content".
 <p>Jump to: <a href="#basic">Basic Use</a>, <a href="#explanation">Explanation</a>, <a href="#createTemplate">Template Creation</a>, <a href="#files">Files</a>, <a href="#examples">Examples</a>, <a href="#advanced">Advanced Use</a>, <a href="#changelog">Changelog</a>, <a href="#contact">Contact Us</a>.
@@ -1364,29 +1364,35 @@ function bodyOnloadFunction() {
     <p>All line endings will be converted to the system-specific version (e.g., CR+LF on Windows), so a template created on Windows can be used on Linux or macOS, or vice versa.</p>
 
 <h3>Output of resume-randomizer program</h3>
-<p>The resume-randomizer program produces a codebook file, a collated data file, the "resumes", and three data files for each resume.  All the created files are plain-text.  The resume itself ends in ".doc".  Since the file is plaintext, it does not need to be opened by Microsoft Word (or Open Office), but can be loaded into any text editor or webbrowser.  Its extension can be changed to ".txt" or ".html" (or ".tex"), to make it easier to load in a different program.</p>
-<p>The single codebook file ends in ".xls".  It is a tab-delimited file.  Each line contains the text for a Leaf, along with the parent section's label (e.g., 1-3-8), and the number of this Leaf in that parent section.  The codebook is meant to assist interpretation of the ".csv" files, which contain the number of the Leaf selected for each Random or Dependent section in each iteration.  The codebook is particularly useful when the template contains "file fragments" because the text from the fragments are collated into the codebook along with the parent section label and the Leaf number.</p>
-<ul>
-<li>If the program finds one or more existing codebook files for the template file, it will check to see if the last-modified codebook is correct for the current template.  If there is a previous codebook and it is correct, no new codebook is created.  If the program does not find a codebook file, or the codebook file is not correct, a new codebook file will be created.  The program will not overwrite previous codebook files (the new codebook's filename will contain the lowest available integer).
-<li>Keeping multiple codebooks for the same template file may be necessary if 1) the same template filename is used to generate resumes before and after changes to the template itself, and 2) the experimenter wants to analyze data from both the pre-edit and post-edit sets of resumes.  Specifically any changes to the template that would affect the data stored in the codebook could necessitate multiple codebooks (some template changes will not affect the Leafs and so will not alter the codebook).  In that case:
-<ul>
-<li>The experimenter should keep copies of both the template and the codebook from before and after those edits.  The experiment must also keep track of which resumes correspond to which template file and codebook file.
-<li>One simple approach to avoiding this issue is to always change the template's filename whenever it is edited, and ensure that the new filename is unique (e.g., a version number in the filename).  In this manner only one codebook file will be created for each template file.
-</ul>
-</ul>
-<p>A single "collated" csv file is also created that contains all the random choices made by the 'Random' and 'Dependent' sections.  So just that one collated csv file is necessary for data analysis.  A new collated csv file is created each time the executable generates a new set of batches of resumes.  The collated csv files should not overwrite each other because each contains the date and time of creation in its filename.
+<p>The resume-randomizer program produces the "resumes", a log file, a codebook file, a collated data file, and three data files for each resume.  All the created files are plain-text.
   <ul>
-    <li>The one complication with putting all of the csv data into one file is how to order the variables, since not all Random sections are entered for each resume.  Our solution has been to sort the variable names, which generally is useful (e.g., v1-1 comes before v1-2, as it does in the template) but can be confusing when a Repeating Random section counts down (has a negative step value) and uses "Do not print doubles."  See <a href="#example10">Example 10</a> for instance: the collated csv file will list the variable v1_5_iter1994 before v1_5_iter1995, even though the program actually made the 1994 random selection after the 1995 random selection...and therefore if both v1_5_iter1994 and v1_5_iter1995 were 3 then there will be a v1_5_iter1995_3 in which the sub-choice was made, but there will not be a v1_5_iter1994_3 because the v1_5 section is "Do not print doubles" so the sub-section will not even be entered for iteration 1994 since it is immediately repeating the 1995 selection. If you look at the individual csv files you will see that the variables therein are ordered as the decisions were made.
+    <li>The resumes end in ".doc".  Since the files are plaintext, they do not need to be opened by Microsoft Word (or Open Office), but can be loaded into any text editor or webbrowser.  Their extensions can be changed to ".txt" or ".html" (or ".tex"), to make it easier to load in a different program.</li>
+    <li>The log file contains all of the text printed to the screen, plus various information that may be useful for debugging problems.</li>
+    <li>The single codebook file ends in ".xls".  It is a tab-delimited file.  Each line contains the text for a Leaf, along with the parent section's label (e.g., 1-3-8), and the number of this Leaf in that parent section.  The codebook is meant to assist interpretation of the ".csv" files, which contain the number of the Leaf selected for each Random or Dependent section in each iteration.  The codebook is particularly useful when the template contains "file fragments" because the text from the fragments are collated into the codebook along with the parent section label and the Leaf number.
+      <ul>
+	<li>If the program finds one or more existing codebook files for the template file, it will check to see if the last-modified codebook is correct for the current template.  If there is a previous codebook and it is correct, no new codebook is created.  If the program does not find a codebook file, or the codebook file is not correct, a new codebook file will be created.  The program will not overwrite previous codebook files (the new codebook's filename will contain the lowest available integer).</li>
+	<li>Keeping multiple codebooks for the same template file may be necessary if 1) the same template filename is used to generate resumes before and after changes to the template itself, and 2) the experimenter wants to analyze data from both the pre-edit and post-edit sets of resumes.  Specifically any changes to the template that would affect the data stored in the codebook could necessitate multiple codebooks (some template changes will not affect the Leafs and so will not alter the codebook).  In that case:
+	  <ul>
+	    <li>The experimenter should keep copies of both the template and the codebook from before and after those edits.  The experiment must also keep track of which resumes correspond to which template file and codebook file.</li>
+	    <li>One simple approach to avoiding this issue is to always change the template's filename whenever it is edited, and ensure that the new filename is unique (e.g., a version number in the filename).  In this manner only one codebook file will be created for each template file.</li>
+	  </ul>
+      </ul>
+    <li>A single "collated" csv file is also created that contains all the random choices made by the 'Random' and 'Dependent' sections.  So just that one collated csv file is necessary for data analysis.  A new collated csv file is created each time the executable generates a new set of batches of resumes.  The collated csv files should not overwrite each other because each contains the date and time of creation in its filename.
+      <ul>
+	<li>The one complication with putting all of the csv data into one file is how to order the variables, since not all Random sections are entered for each resume.  Our solution has been to sort the variable names, which generally is useful (e.g., v1-1 comes before v1-2, as it does in the template) but can be confusing when a Repeating Random section counts down (has a negative step value) and uses "Do not print doubles."  See <a href="#example10">Example 10</a> for instance: the collated csv file will list the variable v1_5_iter1994 before v1_5_iter1995, even though the program actually made the 1994 random selection after the 1995 random selection...and therefore if both v1_5_iter1994 and v1_5_iter1995 were 3 then there will be a v1_5_iter1995_3 in which the sub-choice was made, but there will not be a v1_5_iter1994_3 because the v1_5 section is "Do not print doubles" so the sub-section will not even be entered for iteration 1994 since it is immediately repeating the 1995 selection. If you look at the individual csv files you will see that the variables therein are ordered as the decisions were made.
+      </ul>
+    <li>For each ".doc" file, the program also generates files ending in ".sav", ".txt", and ".csv" containing the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  These data files are meant to assist analysis of experimental results with respect to resume text.  Each of these files contains sufficient information to reconstruct the resume from the template...but it is generally easier to use the single collated csv file.
+      <small>
+	<ul>
+	  <li>The ".csv" file is meant to make it easier to load the data into an analysis program (e.g., Stata).  It consists of comma-separated text, with one line containing variable names (e.g., the identification of the section making a choice), and a second line with the choices made by each Random and Dependent section, for each iteration. (Note that the Dependent section choices <em>should</em> be duplicates of the Random sections they depend upon.)</li>
+	  <ul>
+	    <li>Beware that the data saved to the ".csv" files is in a different format than the data saved to the ".txt" and ".doc" files.  First, the variable names are not the same as the section labels, due to the inclusion of the iteration.  Second, the text "v" is prepended onto the point labels.  For example, if section 1-2 is Random and repeating with start 10, end 14, interval 2, then the variable names would contain v1-2-iter10, v1-2-iter12, and v1-2-iter14.  Third, the choices on the second line run from 1 through n, where n is the number of subsections.</li>
+	  </ul>
+	  <li>The ".txt" file contains just the filename for the resume and then a tab-delimited list of the choices made by the program in creating the resume.  The choices are numbers 0 through n-1 where n is the number of subsections.  So if the program generated a resume by randomly always choosing the first option in each Random section, the ".txt" file would contain the filename followed by zeros, all separated by tabs.  Parsing this information requires understanding the structure of the template.</li>
+	  <li>The ".sav" file contains several lines of explanatory text describing how the resume was generated, and then a description of how to read the rest of the file.  The rest of the file consists of pairs of lines.  The first line in each pair is the description (or tag) of the section that required a choice.  The second line is the choice that was made (a number 0 through n-1 where n is the number of subsections).  The inclusion of the section information makes the information in this format easier to parse.</li>
+	</ul>
+      </small>
   </ul>
-<p>For each ".doc" file, the program also generates files ending in ".sav", ".txt", and ".csv" containing the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  These data files are meant to assist analysis of experimental results with respect to resume text.  Each of these files contains sufficient information to reconstruct the resume from the template...but it is generally easier to use the single collated csv file.
-<small>
-<ul>
-  <li>The ".csv" file is meant to make it easier to load the data into an analysis program (e.g., Stata).  It consists of comma-separated text, with one line containing variable names (e.g., the identification of the section making a choice), and a second line with the choices made by each Random and Dependent section, for each iteration. (Note that the Dependent section choices <em>should</em> be duplicates of the Random sections they depend upon.)
-    <ul><li>Beware that the data saved to the ".csv" files is in a different format than the data saved to the ".txt" and ".doc" files.  First, the variable names are not the same as the section labels, due to the inclusion of the iteration.  Second, the text "v" is prepended onto the point labels.  For example, if section 1-2 is Random and repeating with start 10, end 14, interval 2, then the variable names would contain v1-2-iter10, v1-2-iter12, and v1-2-iter14.  Third, the choices on the second line run from 1 through n, where n is the number of subsections.</ul>
-  <li>The ".txt" file contains just the filename for the resume and then a tab-delimited list of the choices made by the program in creating the resume.  The choices are numbers 0 through n-1 where n is the number of subsections.  So if the program generated a resume by randomly always choosing the first option in each Random section, the ".txt" file would contain the filename followed by zeros, all separated by tabs.  Parsing this information requires understanding the structure of the template.
-  <li>The ".sav" file contains several lines of explanatory text describing how the resume was generated, and then a description of how to read the rest of the file.  The rest of the file consists of pairs of lines.  The first line in each pair is the description (or tag) of the section that required a choice.  The second line is the choice that was made (a number 0 through n-1 where n is the number of subsections).  The inclusion of the section information makes the information in this format easier to parse.
-</ul>
-</small>
 </p>
 
 <hr>
@@ -1527,6 +1533,7 @@ Another way of having a Random section affect later text is through template-cre
 <h2><a name="changelog">Changelog</a></h2>
 <small>
   <ul>
+    <li>Version 33 on 02/27/2022: Adds description of log file.
     <li>Version 32 on 12/19/2019: No changes to the gui.  Version number updated to correspond with the executable's version number.
     <li>Version 31 on 8/25/2019: Small changes to the instructions text, for clarity. Added contact info.
     <li>Version 30 on 12/4/2017: Template created variables can now contain tags for newlines. New example of having a header in the text if and only if there one or more Random sections will put text in that section.
