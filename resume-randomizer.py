@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Version 33 02/27/2022: Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file.
+# Version 33 02/27/2022: Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file.
 # Version 32 12/19/2019: Fixes SyntaxWarning about "is" with a literal. Removed numpy import.
 # Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
@@ -51,9 +51,9 @@
 
 # TODO:
 # pylint
-# yapf
+# black
 # better docstrings, e.g., arguments
-# typing hints
+# typehints
 # unit tests
 # pathlib.Path
 
@@ -1461,8 +1461,9 @@ def getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastC
   
   if random()*100. < repeatDifferentDoublePercentage: chosenSubelement = dictionaryLastChoice[myLabel]
   else:
-    freeToChoose.remove(dictionaryLastChoice[myLabel])
-    freeToChoose += [dictionaryLastChoice[myLabel]] # needed in case there is only one choice
+    if dictionaryLastChoice[myLabel] in freeToChoose:
+        freeToChoose.remove(dictionaryLastChoice[myLabel])
+        freeToChoose += [dictionaryLastChoice[myLabel]] # needed in case there is only one choice
     chosenSubelement = freeToChoose[0]
   return chosenSubelement
 
@@ -1633,7 +1634,8 @@ def getChosenSubElement(repeatSame, repeatNever, repeatNoDoubles, repeatDifferen
       
   if matchSame and myVariableName in dictionaryMatchSame: chosenSubelement = getChoiceForMatchSame(repeatSame, myLabel, myVariableName, dictionaryMatchSame, dictionaryRepeatSame, repeatNever, dictionaryRepeatNever)
   elif repeatSame: chosenSubelement = getChoiceForRepeatSame(myLabel, dictionaryRepeatSame, freeToChoose, myVariableName)
-  elif repeatDifferentDouble and myLabel in dictionaryLastChoice: chosenSubelement = getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastChoice, myLabel, freeToChoose)
+  elif repeatDifferentDouble and myLabel in dictionaryLastChoice and dictionaryLastChoice[myLabel] in freeToChoose:
+    chosenSubelement = getChoiceForDifferentDouble(repeatDifferentDoublePercentage, dictionaryLastChoice, myLabel, freeToChoose)
   else: chosenSubelement = freeToChoose[0]
 
   logging.debug('getChosenSubelement chose: %s', chosenSubelement)
