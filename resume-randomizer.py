@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Version 33 07/22/2022: Upgrade to Python 3.11.4.  Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file. isort & black formatting. Adds requirements file.
+# Version 33 07/22/2022: Upgrade to Python 3.11.4.  Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file. isort & black formatting. Adds requirements file. Adds __main__ block.
 # Version 32 12/19/2019: Fixes SyntaxWarning about "is" with a literal. Removed numpy import.
 # Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
@@ -2708,78 +2708,85 @@ def isTemplateFile(file_name):
     return True
 
 
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.INFO)
-logging.basicConfig(
-    format="%(message)s", level=logging.DEBUG, handlers=[stdout_handler]
-)
-retval = 1
-while retval >= 0:
-    logging.info(
-        "\nResumeRandomizer program, version %d, last updated %s.\n", Version, Date
+def main() -> int:
+    """Handles user interface for creating resumes."""
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.INFO)
+    logging.basicConfig(
+        format="%(message)s", level=logging.DEBUG, handlers=[stdout_handler]
     )
-    templateFileNames = glob.glob("*.rtf")
-    templateFileNames = [x for x in templateFileNames if os.path.isfile(x)]
-    if templateFileNames is None or len(templateFileNames) < 1:
+    retval = 1
+    while retval >= 0:
+        logging.info(
+            "\nResumeRandomizer program, version %d, last updated %s.\n", Version, Date
+        )
+        templateFileNames = glob.glob("*.rtf")
+        templateFileNames = [x for x in templateFileNames if os.path.isfile(x)]
+        if templateFileNames is None or len(templateFileNames) < 1:
+            logging.warning(
+                "No .rtf file available...where are the resume template files?  They "
+                "should be in the same folder as this program."
+            )
+            input("Press return to quit.")
+            break
+
+        templateFileNames = [x for x in templateFileNames if isTemplateFile(x)]
+        if templateFileNames is None or len(templateFileNames) < 1:
+            logging.warning(
+                "There are .rtf files in the folder, but they do not appear to be "
+                "template files...where are the resume template files?  They should be "
+                "in the same folder as this program."
+            )
+            input("Press return to quit.")
+            break
+
+        logging.info(
+            "Available templates:%s\n",
+            "".join(
+                [f"\n{i+1}) {templateFileNames[i]}" for i in range(len(templateFileNames))]
+            ),
+        )
+        try:
+            whichTemplate = int(input("Which template?  (0 to quit) "))
+        except ValueError:
+            input(
+                "Please enter an integer between 0 and "
+                + str(len(templateFileNames))
+                + ". Press return."
+            )
+            continue
+        if whichTemplate < 1:
+            logging.info("Bye")
+            break
+        if whichTemplate > len(templateFileNames):
+            input("That number is too large.  Press return to continue.")
+            continue
+        whichTemplate -= 1
+        file_name = templateFileNames[whichTemplate]
+
+        # Start logger
+        current_time = strftime("_%Y-%m-%d-%H-%M-%S")
+        file_handler = logging.FileHandler(
+            file_name + current_time + ".log", encoding="utf8"
+        )
+        file_handler.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(file_handler)
+        logging.info("Using template " + file_name)
+        logging.info("")
+        retval = createResumes(file_name, current_time)
+        logging.getLogger().removeHandler(file_handler)
+        file_handler.close()
+
+    if retval < -1:
         logging.warning(
-            "No .rtf file available...where are the resume template files?  They "
-            "should be in the same folder as this program."
+            "\nResumeRandomizer has exited with a return code of %d.\nThere may have "
+            "been an error.  If you cannot fix the problem, or need help, contact one "
+            "of the authors.",
+            retval,
         )
         input("Press return to quit")
-        break
+    return retval
 
-    templateFileNames = [x for x in templateFileNames if isTemplateFile(x)]
-    if templateFileNames is None or len(templateFileNames) < 1:
-        logging.warning(
-            "There are .rtf files in the folder, but they do not appear to be "
-            "template files...where are the resume template files?  They should be "
-            "in the same folder as this program."
-        )
-        input("Press return to quit")
-        break
 
-    logging.info(
-        "Available templates:%s\n",
-        "".join(
-            [f"\n{i+1}) {templateFileNames[i]}" for i in range(len(templateFileNames))]
-        ),
-    )
-    try:
-        whichTemplate = int(input("Which template?  (0 to quit) "))
-    except ValueError:
-        input(
-            "Please enter an integer between 0 and "
-            + str(len(templateFileNames))
-            + ". Press return."
-        )
-        continue
-    if whichTemplate < 1:
-        logging.info("Bye")
-        break
-    if whichTemplate > len(templateFileNames):
-        input("That number is too large.  Press return")
-        continue
-    whichTemplate -= 1
-    file_name = templateFileNames[whichTemplate]
-
-    # Start logger
-    current_time = strftime("_%Y-%m-%d-%H-%M-%S")
-    file_handler = logging.FileHandler(
-        file_name + current_time + ".log", encoding="utf8"
-    )
-    file_handler.setLevel(logging.DEBUG)
-    logging.getLogger().addHandler(file_handler)
-    logging.info("Using template " + file_name)
-    logging.info("")
-    retval = createResumes(file_name, current_time)
-    logging.getLogger().removeHandler(file_handler)
-    file_handler.close()
-
-if retval < -1:
-    logging.warning(
-        "\nResumeRandomizer has exited with a return code of %d.\nThere may have "
-        "been an error.  If you cannot fix the problem, or need help, contact one "
-        "of the authors.",
-        retval,
-    )
-    input("Press return to quit")
+if __name__ == '__main__':
+    sys.exit(main())
