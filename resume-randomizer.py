@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Version 33 07/22/2022: Upgrade to Python 3.11.4.  Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file. isort & black formatting.
+# Version 33 07/22/2022: Upgrade to Python 3.11.4.  Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file. isort & black formatting. Adds requirements file.
 # Version 32 12/19/2019: Fixes SyntaxWarning about "is" with a literal. Removed numpy import.
 # Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
@@ -50,7 +50,7 @@
 # Version 1 6/20/2007
 
 # TODO:
-# requirements file
+# review webpage instructions for clarity and thoroughness
 # pylint
 # better docstrings, e.g., arguments
 # typehints
@@ -59,7 +59,7 @@
 
 
 Version = 33
-Date = "February 27, 2022"
+Date = "July 23, 2023"
 
 import glob
 import io
