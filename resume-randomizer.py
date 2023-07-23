@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Version 33 02/27/2022: Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file.
+# Version 33 07/22/2022: Upgrade to Python 3.11.4.  Fixes bug in interaction between MatchDifferent and "Non-uniform chance for immediate repeat" that could cause crash. Replaces deprecated distutils and pandas.DataFrame.append. Logs console outputs and debugging info to file.
 # Version 32 12/19/2019: Fixes SyntaxWarning about "is" with a literal. Removed numpy import.
 # Version 31 8/25/2019: Fixes pandas Warning about sorting of appended dataframes.
 # Version 30 12/4/2017: Template created variables can now use \n for newline.  Bugfix in the output encoding if first a default encoding is used in generating resumes, and then a non-default encoding is used in generating resumes from a template that does not contain file fragments.
@@ -63,6 +63,7 @@ Date = "February 27, 2022"
 
 import glob
 import io
+import json
 import locale
 import logging
 import math
@@ -74,7 +75,6 @@ import sys
 import tempfile
 from chardet.universaldetector import UniversalDetector
 from functools import reduce
-from packaging import version
 from random import randrange
 from random import random
 from random import shuffle
@@ -859,7 +859,7 @@ def createResumes(file_name, current_time):
       logging.info('Done with resume %s', outputFilename)
 
   sortedColumns = dfAllChoices.columns.values.tolist()
-  sortedColumns.sort(key=version.parse)
+  sortedColumns.sort(key=sortColumnName)
   firstColumns = ['filename', 'batch', 'numberOfBatches', 'resume', 'numberOfResumesPerBatch', 'yearMonthDayHourMinuteSecond']
   newColumns = firstColumns + [col for col in sortedColumns if col not in firstColumns]
   dfAllChoices = dfAllChoices[newColumns]
@@ -868,6 +868,24 @@ def createResumes(file_name, current_time):
   dfAllChoices.to_csv(collatedFilename, index=False)
   inFile.close()
   return 1
+
+
+def sortColumnName(text):
+  """
+  Given a column name in the collated csv, returns a key for sorting.
+  """
+  result = [text]
+  if len(text) > 2 and text[0:3] == 'v1_':
+    # If it is a section id, separate the numbers from the underscores and "iter"
+    result = ['v']
+    split = text[1:].split('_')
+    for token in split:
+      if token.startswith('iter'):
+        token = token[4:]
+      number = json.loads(token)
+      result.append(number)
+  return result
+
 
 def skipElement(inFile, currentLine):
   """
@@ -1748,6 +1766,7 @@ def isTemplateFile(file_name):
       return False
   return True
 
+
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.INFO)
 logging.basicConfig(format='%(message)s',
@@ -1802,6 +1821,7 @@ while retval >= 0:
   logging.info('')
   retval = createResumes(file_name, current_time)
   logging.getLogger().removeHandler(file_handler)
+  file_handler.close()
 
 if retval < -1:
   logging.warning(
