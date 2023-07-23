@@ -68,17 +68,16 @@ import locale
 import logging
 import math
 import os
-import pandas
 import re
 import shutil
 import sys
 import tempfile
-from chardet.universaldetector import UniversalDetector
 from functools import reduce
-from random import randrange
-from random import random
-from random import shuffle
+from random import random, randrange, shuffle
 from time import strftime
+
+import pandas
+from chardet.universaldetector import UniversalDetector
 
 globalDelayedWrite = []
 globalMemory = {}
