@@ -28,7 +28,7 @@ Instructions:
 
 2. The webpage consists of one html file.  Load "resume-randomizer.html" into your web browser.  The webpage has been tested and works in Firefox, Chrome, Safari, Internet Explorer, and Microsoft Edge.  The webpage contains further explanation and instructions.
 
-3. Once one or more template files have been generated, use Python 3.6 or later to run the python script "resume-randomizer.py" to generate resumes.  Four sample template files are provided to demonstrate the use of the program: "example_cover_letter_template.rtf", "example_resume_template.rtf", "example_resume_template_with_fragments.rtf", and "example_cyrillic_template.rtf".  **Alternatively to using Python**, download a Windows executable of the resume-randomizer script in a zip file from the [NBER website](http://www.nber.org/resume-audit/).
+3. Once one or more template files have been generated, use Python 3.11 or later to run the python script "resume-randomizer.py" to generate resumes.  Four sample template files are provided to demonstrate the use of the program: "example_cover_letter_template.rtf", "example_resume_template.rtf", "example_resume_template_with_fragments.rtf", and "example_cyrillic_template.rtf".
 
 ****************************************************************
 
