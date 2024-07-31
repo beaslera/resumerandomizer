@@ -59,7 +59,7 @@
 
 
 Version = 33
-Date = "July 23, 2023"
+Date = "July 30, 2024"
 
 import glob
 import io
@@ -719,7 +719,7 @@ def printCodebook(inFile, filename):
             latestCodebook.close()
             if saveCodebook:
                 logging.warning(
-                    "\nWarning! The template does not match the latest codebook file: %s\n",
+                    "\nWarning! The template does not match the latest codebook file: %s\n"
                     "One (or both) of the template or the codebook have been modified.\n"
                     "A new codebook file will be created for the files being generated "
                     "now.",
