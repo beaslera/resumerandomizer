@@ -1334,8 +1334,8 @@ function bodyOnloadFunction() {
 <h2><a name="basic">Basic Use</a></h2>
 <ul>
 <li>To generate a template, use the drop down boxes in the middle of this page ("create templates here") to select a type (one of 'Constant', 'Random', 'Dependent', or 'Leaf') for each point in the outline, entering text for each 'Leaf' point.  See the examples below for illustrations of the use of the program.
-<li>To <b>save</b> a template, copy the text in the frame to the right and paste into a file on your computer.  That file must be in the same folder as the Resume Randomizer program and its name must end with ".rtf" (no quotes), which stands for resume template file.  Use Notepad, Emacs, Vi, or some other editor that does not store extra information in the file.  Do not use Microsoft Word or Wordpad, because the resume-randomizer program cannot handle extra information (e.g., formatting, or version info for the editor) added to the resume template file.
-<li>To <b>create</b> resumes<a href="#footnote1"><sup>[1]</sup></a> from a template, if you are on Windows you can run (double-click) the Resume Randomizer program, "resume-randomizer.exe".  Alternatively, on Windows, macOS, or Linux you can install <a href="https://www.anaconda.com/download/#download">Python 3</a> and use it to run "resume-randomizer.py". Either way the resume randomizer program will then ask which template file it should use to create resumes.
+<li>To <b>save</b> a template, copy the text in the frame to the right and paste into a file on your computer.  That file must be in the same folder as the Resume Randomizer program and its name must end with ".rtf" (no quotes), which stands for resume template file.  Use Notepad++, Notepad, Emacs, Vi, or some other editor that does not store extra information in the file.  Do not use Microsoft Word or Wordpad, because the resume-randomizer program cannot handle extra information (e.g., formatting, or version info for the editor) added to the resume template file.
+<li>To <b>create</b> resumes<a href="#footnote1"><sup>[1]</sup></a> from a template, use <a href="https://www.anaconda.com/download/#download">Python</a> (recommended version 3.11) to run "resume-randomizer.py". The resume randomizer program will then ask which template file it should use to create resumes.
 <li>To <b>load</b> a template into this webpage for changes at a later date: 1) delete the text in the frame to the right, 2) copy the text from a previously created template file, 3) paste that text into the right-hand frame's text box, 4) then press the button "Load this template" which will update the "Create templates here" section to represent the loaded template.
 <li>Pressing the "Clear template" button in the right-hand frame will reset the template so that there is only one point, a 'Leaf'.
 <li>Pressing the "Select all" button in the right-hand frame will select the text, making it easier to copy or delete.
@@ -1345,9 +1345,22 @@ function bodyOnloadFunction() {
 
 <hr>
 <h2><a name="explanation">Explanation</a></h2>
-<p>This webpage generates templates which are used by the Resume Randomizer program, "resume-randomizer.exe" or "resume-randomizer.py" (distributed with this html file), to create resumes with randomized characteristics.  It is possible to create templates without using this webpage, but this webpage makes the process easier by reducing potential for errors and providing a graphical user interface (GUI).  See the included "README.md" file for an overview, as well as: Lahey, Joanna and Beasley, Ryan A., Computerizing Audit Studies (July 1, 2007). Available at SSRN: <a style="white-space:nowrap;" href="http://ssrn.com/abstract=1001038">http://ssrn.com/abstract=1001038</a> or <a style="white-space:nowrap;" href="http://dx.doi.org/10.2139/ssrn.1001038">http://dx.doi.org/10.2139/ssrn.1001038</a>.
-<p>When creating resumes, the program starts at the top point in the template's outline (which has the label '1').  When it encounters an outline point with the 'Constant' type, it moves to each of the sub-points in the order listed.  When the program encounters an outline point with the 'Random' type, it moves to only one of the sub-points (chosen randomly with equal likelihood by default).  When it encounters an outline point with the 'Dependent' type, it must depend on a specific 'Random' section earlier in the template; the 'Dependent' section always chooses the same sub-point as the 'Random' section on which it depends.  When the program encounters an outline point with the 'Leaf' type, it writes any text in that 'Leaf' to the resume file.  Note that outline points labeled 'Constant' and 'Random' have drop-down boxes to select the number of sub-points. See the "Examples" section for demonstrations of randomized characteristics in resumes.
-    <p>The program produces four files for each resume, plus a single codebook file and a "collated" data file.  All the created files are plain-text.  The resume itself ends in ".doc".  The other three files created for each resume (ending in ".sav", ".txt", and ".csv") are data files that contain the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  Each of these three files contains sufficient information to reconstruct the resume from the template, and the data in all of the csv files are concatenated into the single collated csv file.  The single codebook file (ends in ".xls") matches the numbers in those data files with the actual text that would be placed in the resumes.  These files are discussed in more detail in the section "Output of resume-randomizer program".
+<p>This webpage generates templates which are used by the Resume Randomizer script, "resume-randomizer.py", to create resumes with randomized characteristics.  It is possible to create templates without using this webpage, but this webpage makes the process easier by reducing potential for errors and providing a graphical user interface (GUI).  See the included "README.md" file for an overview, as well as: Lahey, Joanna and Beasley, Ryan A., Computerizing Audit Studies (July 1, 2007). Available at SSRN: <a style="white-space:nowrap;" href="http://ssrn.com/abstract=1001038">http://ssrn.com/abstract=1001038</a> or <a style="white-space:nowrap;" href="http://dx.doi.org/10.2139/ssrn.1001038">http://dx.doi.org/10.2139/ssrn.1001038</a>.
+<p>When creating resumes, the program starts at the top point in the template's outline (which has the label '1').  At each outline point, the program either writes text to the resume file or traverses sub-points, depending on the type of the outline point:
+<ul>
+	<li>'Leaf' writes any text in that 'Leaf' to the resume file,
+	<li>'Constant' visits each of the sub-points in the order listed,
+	<li>'Random' visits only one of the sub-points (chosen randomly with equal likelihood by default),
+	<li>'Dependent' visits the same sub-point as the 'Random' section on which it depends.
+</ul>
+'Constant' and 'Random' types have drop-down boxes to select the number of sub-points.
+<p>The program produces four files for each resume, plus a single codebook file and a "collated" data file.  All the created files are plain-text.  These files are discussed in more detail in the section "Output of resume-randomizer program":
+<ul>
+	<li>The resume itself ends in ".doc".
+	<li>The other three files created for each resume (ending in ".sav", ".txt", and ".csv") are data files that contain the choices made for each 'Random' and 'Dependent' section in the generation of that resume from the template.  Each of these three files contains sufficient information to reconstruct the resume from the template.
+	<li>The data in all of the csv files are concatenated into the single collated csv file.
+	<li>The single codebook file (ends in ".xls") contains all the text that could be written to any resume, ordered by parent's outline point and the number of the sub-point.  The collated csv file details which random selections were made for each resume, and this codebook provides the mapping between those selections and the text written to the resumes.
+</ul>
 
 <hr><h2><a name="createTemplate">Create templates here:</a></h2>
 <div id='gui'>
@@ -1533,7 +1546,7 @@ Another way of having a Random section affect later text is through template-cre
 <h2><a name="changelog">Changelog</a></h2>
 <small>
   <ul>
-    <li>Version 33 on 02/27/2022: Adds description of log file.
+    <li>Version 33 on 2024/07/30: Updates recommended version of Python to version 3.11. Adds description of log file. Removes mention of the executable that has not been created for years.
     <li>Version 32 on 12/19/2019: No changes to the gui.  Version number updated to correspond with the executable's version number.
     <li>Version 31 on 8/25/2019: Small changes to the instructions text, for clarity. Added contact info.
     <li>Version 30 on 12/4/2017: Template created variables can now contain tags for newlines. New example of having a header in the text if and only if there one or more Random sections will put text in that section.
